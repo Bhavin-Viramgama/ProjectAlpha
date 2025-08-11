@@ -14,7 +14,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -31,19 +30,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.ui.navigation.Screen
 import com.example.projectalpha.ui.navigation.bottomNavItems
 import com.example.projectalpha.ui.screen.habits.HabitsScreen
 import com.example.projectalpha.ui.screen.home.HomeScreen
-import com.example.projectalpha.ui.screen.home.TaskCard
 import com.example.projectalpha.ui.screen.pomodoro.PomodoroScreen
 import com.example.projectalpha.ui.screen.profile.ProfileScreen
 import com.example.projectalpha.ui.screen.todo.ToDoScreen
@@ -55,9 +51,6 @@ import com.example.projectalpha.viewmodel.PomodoroViewModelFactory
 import com.example.projectalpha.viewmodel.ToDoViewModel
 import com.example.projectalpha.viewmodel.ToDoViewModelFactory
 import com.example.projectalpha.viewmodel.* // Import all your ViewModels and Factories
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 
 class MainActivity : ComponentActivity() {

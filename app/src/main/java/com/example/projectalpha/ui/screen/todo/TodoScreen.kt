@@ -1,7 +1,6 @@
 package com.example.projectalpha.ui.screen.todo
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,7 +10,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.ShoppingCart
 // Checkbox does not need a specific icon import for its visual state
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
