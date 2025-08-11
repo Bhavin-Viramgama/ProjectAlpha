@@ -30,4 +30,7 @@ class TaskRepository(private val taskDao: TaskDao) {
 
     suspend fun getTaskCountForMonth(startDate: LocalDate, endDate: LocalDate): Int =
         taskDao.getTaskCountForMonth(startDate, endDate)
+
+    suspend fun getTaskCountForToday(date: LocalDate): Int =
+        taskDao.getTaskCountForToday(date)
 }

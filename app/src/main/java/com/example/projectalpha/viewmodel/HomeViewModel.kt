@@ -37,8 +37,12 @@ class HomeViewModel(
     private val _monthlyTaskCount = MutableStateFlow(0)
     val monthlyTaskCount: StateFlow<Int> = _monthlyTaskCount.asStateFlow()
 
+    private val _todaysTaskCount = MutableStateFlow(0)
+    val todaysTaskCount: StateFlow<Int> = _todaysTaskCount.asStateFlow()
+
     init {
         loadMonthlyTaskCount()
+        loadTodaysTaskCount()
         // Ensure streak exists (good place for this)
         viewModelScope.launch {
             streakRepository.ensureStreakExists()
@@ -51,6 +55,13 @@ class HomeViewModel(
             val firstDayOfMonth = today.withDayOfMonth(1)
             val lastDayOfMonth = YearMonth.from(today).atEndOfMonth()
             _monthlyTaskCount.value = taskRepository.getTaskCountForMonth(firstDayOfMonth, lastDayOfMonth)
+        }
+    }
+
+    private fun loadTodaysTaskCount() {
+        viewModelScope.launch {
+            val today = LocalDate.now()
+            _todaysTaskCount.value = taskRepository.getTaskCountForToday(today)
         }
     }
 

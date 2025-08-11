@@ -38,4 +38,7 @@ interface TaskDao {
 
     @Query("SELECT COUNT(*) FROM tasks WHERE date >= :startDate AND date <= :endDate")
     suspend fun getTaskCountForMonth(startDate: LocalDate, endDate: LocalDate): Int
+
+    @Query("SELECT COUNT(*) FROM tasks WHERE date = :date")
+    suspend fun getTaskCountForToday(date: LocalDate): Int
 }

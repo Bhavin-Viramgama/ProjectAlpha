@@ -29,6 +29,7 @@ import java.time.format.DateTimeFormatter
 fun HomeScreen(homeViewModel: HomeViewModel) {
     val username by homeViewModel.username.collectAsState()
     val monthlyTaskCount by homeViewModel.monthlyTaskCount.collectAsState()
+    val todaysTaskCount by homeViewModel.todaysTaskCount.collectAsState()
     val streakEntity by homeViewModel.streakPoints.collectAsState()
     val todaysTasks by homeViewModel.todaysTasks.collectAsState()
 
@@ -58,6 +59,10 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
             ) {
                 Text(
                     "Monthly Tasks: $monthlyTaskCount",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "Today's Total Tasks: $todaysTaskCount",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
