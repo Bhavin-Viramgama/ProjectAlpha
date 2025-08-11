@@ -9,24 +9,28 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.navigation.NavHostController
-
+import androidx.compose.material3.ExperimentalMaterial3Api
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-//import androidx.compose.material.icons. // Flame icon for streak
-import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -34,10 +38,12 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.ui.navigation.Screen
 import com.example.projectalpha.ui.navigation.bottomNavItems
 import com.example.projectalpha.ui.screen.habits.HabitsScreen
 import com.example.projectalpha.ui.screen.home.HomeScreen
+import com.example.projectalpha.ui.screen.home.TaskCard
 import com.example.projectalpha.ui.screen.pomodoro.PomodoroScreen
 import com.example.projectalpha.ui.screen.profile.ProfileScreen
 import com.example.projectalpha.ui.screen.todo.ToDoScreen
@@ -49,7 +55,9 @@ import com.example.projectalpha.viewmodel.PomodoroViewModelFactory
 import com.example.projectalpha.viewmodel.ToDoViewModel
 import com.example.projectalpha.viewmodel.ToDoViewModelFactory
 import com.example.projectalpha.viewmodel.* // Import all your ViewModels and Factories
-
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 
 class MainActivity : ComponentActivity() {
@@ -111,15 +119,22 @@ fun ProjectAlphaApp() {
             CenterAlignedTopAppBar(
                 title = { Text(currentScreenTitle, style = MaterialTheme.typography.titleLarge) },
                 actions = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(2.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color(0xFF212121))
+                            .padding(4.dp)) {
                         Icon(
-                            imageVector = Icons.Filled.ThumbUp,
+                            painter = painterResource(id = R.drawable.firefill),
+                            modifier = Modifier.size(24.dp),
                             contentDescription = "Streak Points",
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = Color.Unspecified
                         )
                         Text(
                             text = streakPointsDisplay.toString(),
                             style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
                             modifier = Modifier.padding(start = 4.dp, end = 8.dp)
                         )
                     }
@@ -213,11 +228,39 @@ fun AppNavHost(
     }
 }
 
+/*@Composable
+fun TaskCardPreview() {
+    val dummyTask = TaskEntity(
+        id = 1,
+        title = "Finish Kotlin Project",
+        description = "Complete the Jetpack Compose UI and test all features before the deadline.",
+        deadline = LocalDateTime.now().plusHours(5), // 5 hours from now
+        priority = "high",
+        isCompleted = false,
+        date = LocalDate.now()
+    )
+
+    val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a") // Example format
+
+    TaskCard(task = dummyTask, timeFormatter = timeFormatter)
+}
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
-fun DefaultPreview() {
+fun prev(){
     ProjectAlphaTheme {
-        ProjectAlphaApp() // This might require fakes/mocks for ViewModels in previews
-        // or a simplified preview that doesn't instantiate them all.
+            Scaffold(
+            ) { innerPadding ->
+                Surface(Modifier.padding(innerPadding)) {
+                    Column(Modifier.padding(16.dp)){
+                        TaskCardPreview()
+                    }
+                }
+            }
     }
 }
+
+ */

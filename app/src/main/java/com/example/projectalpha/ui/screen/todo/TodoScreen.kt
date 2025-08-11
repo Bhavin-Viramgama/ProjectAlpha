@@ -1,17 +1,22 @@
 package com.example.projectalpha.ui.screen.todo
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.ShoppingCart
 // Checkbox does not need a specific icon import for its visual state
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,9 +28,11 @@ import androidx.compose.ui.window.Dialog
 import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.ui.theme.AppTypography
 import com.example.projectalpha.viewmodel.ToDoViewModel
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -187,7 +194,9 @@ fun TaskItem(
             )
             // Removed Spacer as Checkbox has its own padding/touch target considerations
 
-            Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) { // Add slight start padding to text content
+            Column(modifier = Modifier
+                .weight(1f)
+                .padding(start = 4.dp)) { // Add slight start padding to text content
                 Text(
                     text = task.title,
                     style = AppTypography.titleMedium.copy(
@@ -239,21 +248,32 @@ fun AddTaskDialog(
     onDismiss: () -> Unit,
     onConfirm: (title: String, description: String?, taskDate: LocalDate, deadline: LocalDateTime?, priority: String) -> Unit
 ) {
-    var title by remember { mutableStateOf(taskToEdit?.title ?: "") }
-    var description by remember { mutableStateOf(taskToEdit?.description ?: "") }
-    var taskDate by remember { mutableStateOf(taskToEdit?.date ?: selectedDate) }
-    var deadlineDate by remember { mutableStateOf(taskToEdit?.deadline?.toLocalDate() ?: selectedDate) }
-    var deadlineTime by remember { mutableStateOf(taskToEdit?.deadline?.toLocalTime() ?: LocalTime.NOON) }
-    var hasDeadline by remember { mutableStateOf(taskToEdit?.deadline != null) }
+    var title by rememberSaveable { mutableStateOf(taskToEdit?.title ?: "") }
+    var description by rememberSaveable { mutableStateOf(taskToEdit?.description ?: "") }
+    var taskDateForDialog by rememberSaveable { mutableStateOf(taskToEdit?.date ?: selectedDate) }
+
+    // Deadline states
+    var deadlineDatePart by rememberSaveable { mutableStateOf(taskToEdit?.deadline?.toLocalDate() ?: selectedDate) }
+    var deadlineTimePart by rememberSaveable { mutableStateOf(taskToEdit?.deadline?.toLocalTime() ?: LocalTime.NOON) }
+    var hasDeadline by rememberSaveable { mutableStateOf(taskToEdit?.deadline != null) }
+
     val priorities = listOf("High", "Medium", "Low")
-    var priority by remember { mutableStateOf(taskToEdit?.priority ?: "Medium") }
+    var priority by rememberSaveable { mutableStateOf(taskToEdit?.priority ?: "Medium") }
     var priorityExpanded by remember { mutableStateOf(false) }
     var titleError by remember { mutableStateOf<String?>(null) }
 
+    // Dialog visibility states
+    var showTaskDatePickerDialog by remember { mutableStateOf(false) }
+    var showDeadlineDatePickerDialog by remember { mutableStateOf(false) }
+    var showDeadlineTimePickerDialog by remember { mutableStateOf(false) }
+
+
     Dialog(onDismissRequest = onDismiss) {
-        Card(modifier = Modifier.padding(16.dp)) { // Consider using Surface for dialog content background
+        Card(modifier = Modifier.padding(16.dp)) {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -264,33 +284,67 @@ fun AddTaskDialog(
                     onValueChange = { title = it; titleError = null },
                     label = { Text("Title*") },
                     isError = titleError != null,
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                titleError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = AppTypography.bodySmall) }
+                titleError?.let {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = AppTypography.bodySmall,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Description (Optional)") },
-                    modifier = Modifier.heightIn(min = 80.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 80.dp)
                 )
 
-                Text("Task Date: ${taskDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))}")
-                // TODO: Add Button to launch DatePickerDialog for 'taskDate'
+                OutlinedButton(
+                    onClick = { showTaskDatePickerDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.DateRange, contentDescription = "Select Task Date", modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text("Task Date: ${taskDateForDialog.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))}")
+                }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Checkbox(checked = hasDeadline, onCheckedChange = { hasDeadline = it })
-                    Text("Set Specific Deadline Time")
+                    Text("Set Specific Deadline")
                 }
 
                 if (hasDeadline) {
-                    Text("Deadline: ${deadlineDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))} ${deadlineTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))}")
-                    // TODO: Add Buttons to launch DatePickerDialog for 'deadlineDate' and TimePickerDialog for 'deadlineTime'
+                    // Deadline Date Picker Button
+//                    OutlinedButton(
+//                        onClick = { showDeadlineDatePickerDialog = true },
+//                        modifier = Modifier.fillMaxWidth()
+//                    ) {
+//                        Icon(Icons.Filled.DateRange, contentDescription = "Select Deadline Date", modifier = Modifier.size(ButtonDefaults.IconSize))
+//                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+//                        Text("Deadline Date: ${deadlineDatePart.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))}")
+//                    }
+
+                    // Deadline Time Picker Button
+                    OutlinedButton(
+                        onClick = { showDeadlineTimePickerDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.Lock, contentDescription = "Select Deadline Time", modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                        Text("Deadline Time: ${deadlineTimePart.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))}")
+                    }
                 }
 
                 ExposedDropdownMenuBox(
                     expanded = priorityExpanded,
-                    onExpandedChange = { priorityExpanded = !priorityExpanded }
+                    onExpandedChange = { priorityExpanded = !priorityExpanded },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
                         value = priority,
@@ -298,7 +352,9 @@ fun AddTaskDialog(
                         readOnly = true,
                         label = { Text("Priority") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = priorityExpanded) },
-                        modifier = Modifier.menuAnchor()
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
                     )
                     ExposedDropdownMenu(
                         expanded = priorityExpanded,
@@ -327,8 +383,8 @@ fun AddTaskDialog(
                             titleError = "Title cannot be empty"
                             return@Button
                         }
-                        val finalDeadline = if (hasDeadline) LocalDateTime.of(deadlineDate, deadlineTime) else null
-                        onConfirm(title, description.takeIf { it.isNotBlank() }, taskDate, finalDeadline, priority)
+                        val finalDeadline = if (hasDeadline) LocalDateTime.of(deadlineDatePart, deadlineTimePart) else null
+                        onConfirm(title, description.takeIf { it.isNotBlank() }, taskDateForDialog, finalDeadline, priority)
                     }) {
                         Text(if (taskToEdit == null) "Add" else "Save")
                     }
@@ -336,7 +392,89 @@ fun AddTaskDialog(
             }
         }
     }
+
+    // --- DatePickerDialog for Task Date ---
+    if (showTaskDatePickerDialog) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = taskDateForDialog.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showTaskDatePickerDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showTaskDatePickerDialog = false
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            taskDateForDialog = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                        }
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showTaskDatePickerDialog = false }) { Text("Cancel") } }
+        ) { DatePicker(state = datePickerState) }
+    }
+
+    // --- DatePickerDialog for Deadline Date ---
+    if (showDeadlineDatePickerDialog) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = deadlineDatePart.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDeadlineDatePickerDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeadlineDatePickerDialog = false
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            deadlineDatePart = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                        }
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showDeadlineDatePickerDialog = false }) { Text("Cancel") } }
+        ) { DatePicker(state = datePickerState) }
+    }
+
+
+    // --- TimePickerDialog for Deadline Time ---
+    if (showDeadlineTimePickerDialog) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = deadlineTimePart.hour,
+            initialMinute = deadlineTimePart.minute,
+            is24Hour = false // Or true, depending on your preference/locale
+        )
+        // We need a wrapper Dialog for TimePicker in Material 3 if not using FullscreenTimePicker
+        AlertDialog( // Using AlertDialog as a simple wrapper for TimePickerDialog content
+            onDismissRequest = { showDeadlineTimePickerDialog = false },
+            modifier = Modifier.fillMaxWidth() // Adjust width as needed
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface) // Use surface color
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                TimePicker(state = timePickerState)
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { showDeadlineTimePickerDialog = false }) { Text("Cancel") }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(
+                        onClick = {
+                            showDeadlineTimePickerDialog = false
+                            deadlineTimePart = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                        }
+                    ) { Text("OK") }
+                }
+            }
+        }
+    }
 }
+
+
 
 @Composable
 fun ConfirmDeleteDialog(

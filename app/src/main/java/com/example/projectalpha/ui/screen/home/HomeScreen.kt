@@ -1,11 +1,15 @@
 package com.example.projectalpha.ui.screen.home
 
+import android.icu.lang.UCharacter.toUpperCase
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 //import androidx.compose.material.icons.filled.AccessTime // Clock icon
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
@@ -17,8 +21,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.projectalpha.R
 import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.ui.theme.*
 import com.example.projectalpha.viewmodel.HomeViewModel
@@ -46,7 +55,7 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
         ) {
             // Greeting
             Text(
-                text = "Good Morning, $username",
+                text = "Good Morning, $username!",
                 style = MaterialTheme.typography.headlineSmall
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -75,10 +84,36 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
             OutlinedTextField(
                 value = "",
                 onValueChange = { /* TODO: Implement search logic */ },
-                label = { Text("Search tasks...") },
+                label = {
+                    Text(text = "Search tasks",
+                        fontFamily = FontFamily.Serif,
+                        fontWeight = FontWeight.Medium) },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 50.dp, vertical = 10.dp),
+                singleLine = true,
+                shape = RoundedCornerShape(24),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xfff5f5f5), //CotainerBG
+                    unfocusedContainerColor = Color(0xfff5f5f5),
+                    focusedIndicatorColor = Color(0xFF3F51B5), //Border
+                    unfocusedIndicatorColor = Color.LightGray,
+                    cursorColor = Color(0xFF3F51B5),
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.DarkGray,
+                    focusedPlaceholderColor = Color.Gray,
+                    unfocusedPlaceholderColor = Color.Gray
+                ),
+                trailingIcon = {
+                    IconButton(onClick = {  }) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Clear"
+                        )
+                    }
+                }
+
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -89,8 +124,19 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Today's Tasks", style = MaterialTheme.typography.titleLarge)
-                TextButton(onClick = { /* TODO: Navigate to To Do List screen */ }) {
-                    Text("See all")
+                TextButton(
+                    onClick = { /* TODO: Navigate to To Do List screen */ },
+                    modifier = Modifier
+                        .border(
+                            width = 1.dp,
+                            color = Color(0xFF3F51B5),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xfff5f5f5)),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(text = "See all", style = MaterialTheme.typography.labelMedium)
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -117,16 +163,23 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
 
 @Composable
 fun TaskCard(task: TaskEntity, timeFormatter: DateTimeFormatter) {
+
     val cardColor = when (task.priority.lowercase()) {
-        "high" -> HighPriorityColor.copy(alpha = 0.3f) // Lighter shade for background
-        "medium" -> MediumPriorityColor.copy(alpha = 0.3f)
-        "low" -> LowPriorityColor.copy(alpha = 0.3f)
+        "high" -> HighPriorityColor.copy(alpha = 0.2f) // Lighter shade for background
+        "medium" -> MediumPriorityColor.copy(alpha = 0.2f)
+        "low" -> LowPriorityColor.copy(alpha = 0.2f)
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
     val priorityIndicatorColor = when (task.priority.lowercase()) {
-        "high" -> HighPriorityColor // Solid color for indicator
-        "medium" -> MediumPriorityColor
-        "low" -> LowPriorityColor
+        "high" -> HighPriorityIndicator // Solid color for indicator
+        "medium" -> MediumPriorityIndicator
+        "low" -> LowPriorityIndicator
+        else -> Color.Transparent
+    }
+    val priorityFontColor = when (task.priority.lowercase()) {
+        "high" -> HighPriorityFont // Solid color for indicator
+        "medium" -> MediumPriorityFont
+        "low" -> LowPriorityFont
         else -> Color.Transparent
     }
 
@@ -134,57 +187,89 @@ fun TaskCard(task: TaskEntity, timeFormatter: DateTimeFormatter) {
         modifier = Modifier
             .fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp,priorityFontColor),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
-        Row(
+        Column (
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Priority Indicator (small colored circle or bar)
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(priorityIndicatorColor)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp),
+            verticalArrangement = Arrangement.Center
 
-            Column(modifier = Modifier.weight(1f)) {
+        ){
+            Text(
+                text = "${toUpperCase(task.priority)} PRIORITY",
+                style = MaterialTheme.typography.bodySmall,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.W400,
+                color = priorityFontColor
+            )
+            Row(Modifier.padding(top=8.dp),
+                horizontalArrangement = Arrangement.Center) {
+                // Priority Indicator (small colored circle or bar)
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(priorityIndicatorColor)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = task.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+
+            }
+
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 task.description?.let {
                     if (it.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = it,
                             style = MaterialTheme.typography.bodySmall,
-                            maxLines = 2 // Limit description lines
+                            fontStyle = FontStyle.Italic,
+                            maxLines = 2, // Limit description lines
+                            overflow = TextOverflow.Ellipsis // Shows "..." if text exceeds
+                        )
+                    }else{
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Add Task Description...",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontStyle = FontStyle.Italic,
+                            maxLines = 2, // Limit description lines
+                            overflow = TextOverflow.Ellipsis // Shows "..." if text exceeds
                         )
                     }
                 }
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            task.deadline?.let { deadline ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Notifications,
-                        contentDescription = "Deadline time",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = deadline.format(timeFormatter),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+
+                Spacer(Modifier.height(8.dp))
+                task.deadline?.let { deadline ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.timeline),
+                            contentDescription = "Deadline time",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = deadline.format(timeFormatter),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
+
             }
         }
     }
