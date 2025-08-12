@@ -41,7 +41,6 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun HomeScreen(homeViewModel: HomeViewModel) {
     val username by homeViewModel.username.collectAsState()
-    val monthlyTaskCount by homeViewModel.monthlyTaskCount.collectAsState()
     val todaysTaskCount by homeViewModel.todaysTaskCount.collectAsState()
     val streakEntity by homeViewModel.streakPoints.collectAsState()
     val todaysTasks by homeViewModel.todaysTasks.collectAsState()

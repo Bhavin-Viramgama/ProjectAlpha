@@ -33,21 +33,43 @@ class HomeViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+/*
+This was Wrong in Tasks Count which was not updating automatically while changes,
+Two big issues here:
+todaysTaskCount.collect inside here is actually collecting itself (endless loop / no trigger), so it doesn’t listen to DB changes.
+You’re using taskRepository.getTaskCountForToday(date) as a suspend function returning an Int, which means it runs only when explicitly called, not automatically when the table changes.
 
+How to fix
+You need getTaskCountForToday() in your repository/DAO to return a Flow<Int> instead of a one-time Int, so the ViewModel can observe changes.
+
+DAO
+@Query("SELECT COUNT(*) FROM tasks WHERE date = :date")
+fun getTaskCountForToday(date: LocalDate): Flow<Int>
+
+
+Repository
+fun getTaskCountForToday(date: LocalDate): Flow<Int> =
+    taskDao.getTaskCountForToday(date)
+
+
+ViewModel
+Instead of manually launching and setting _todaysTaskCount, just convert it to a StateFlow directly:
+val todaysTaskCount: StateFlow<Int> =
+    taskRepository.getTaskCountForToday(LocalDate.now())
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
+This way, whenever a task is added, removed, or updated for today, the count will instantly update in your UI without reopening the app.
+
+////Old Code!!!!
     private val _monthlyTaskCount = MutableStateFlow(0)
     val monthlyTaskCount: StateFlow<Int> = _monthlyTaskCount.asStateFlow()
 
     private val _todaysTaskCount = MutableStateFlow(0)
-    val todaysTaskCount: StateFlow<Int> = _todaysTaskCount.asStateFlow()
-
-    init {
-        loadMonthlyTaskCount()
-        loadTodaysTaskCount()
-        // Ensure streak exists (good place for this)
-        viewModelScope.launch {
-            streakRepository.ensureStreakExists()
-        }
-    }
+    val todaysTaskCount1 = StateFlow<Int> = _todaysTaskCount.asStateFlow()
 
     private fun loadMonthlyTaskCount() {
         viewModelScope.launch {
@@ -61,7 +83,29 @@ class HomeViewModel(
     private fun loadTodaysTaskCount() {
         viewModelScope.launch {
             val today = LocalDate.now()
-            _todaysTaskCount.value = taskRepository.getTaskCountForToday(today)
+            todaysTaskCount1.collect { // Initially getTaskCountForToday was returning Int
+                _todaysTaskCount.value = taskRepository.getTaskCountForToday(today)
+            }
+
+        }
+    }
+
+ */
+
+
+    val todaysTaskCount: StateFlow<Int> =
+        taskRepository.getTaskCountForToday(LocalDate.now())
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = 0
+            )
+
+
+    init {
+        // Ensure streak exists (good place for this)
+        viewModelScope.launch {
+            streakRepository.ensureStreakExists()
         }
     }
 

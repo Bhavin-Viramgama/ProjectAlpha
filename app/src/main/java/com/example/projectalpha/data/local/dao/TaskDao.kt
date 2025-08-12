@@ -40,5 +40,5 @@ interface TaskDao {
     suspend fun getTaskCountForMonth(startDate: LocalDate, endDate: LocalDate): Int
 
     @Query("SELECT COUNT(*) FROM tasks WHERE date = :date")
-    suspend fun getTaskCountForToday(date: LocalDate): Int
+    fun getTaskCountForToday(date: LocalDate): Flow<Int>
 }
