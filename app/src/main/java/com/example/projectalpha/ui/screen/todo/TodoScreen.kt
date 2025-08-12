@@ -1,9 +1,15 @@
 package com.example.projectalpha.ui.screen.todo
 
+import android.icu.lang.UCharacter.toUpperCase
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
@@ -18,13 +24,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.ui.theme.AppTypography
+import com.example.projectalpha.ui.theme.HighPriorityFont
+import com.example.projectalpha.ui.theme.LowPriorityFont
+import com.example.projectalpha.ui.theme.MediumPriorityFont
 import com.example.projectalpha.viewmodel.ToDoViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -71,7 +83,7 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
             ) {
-                Button(onClick = { toDoViewModel.selectDate(selectedDate.minusDays(1)) }) {
+                Button(onClick = { toDoViewModel.selectDate(selectedDate.minusDays(1))}) {
                     Text("<")
                 }
                 Text(
@@ -170,8 +182,21 @@ fun TaskItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    // We keep track if the message is expanded or not in this
+    // variable
+    var isExpanded by remember { mutableStateOf(false) }
+
+    val surfaceColor by animateColorAsState(
+        if(isExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+    )
+    val priorityFontColor = when (task.priority.lowercase()) {
+        "high" -> HighPriorityFont // Solid color for indicator
+        "medium" -> MediumPriorityFont
+        "low" -> LowPriorityFont
+        else -> Color.Transparent
+    }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -192,47 +217,65 @@ fun TaskItem(
             )
             // Removed Spacer as Checkbox has its own padding/touch target considerations
 
-            Column(modifier = Modifier
-                .weight(1f)
-                .padding(start = 4.dp)) { // Add slight start padding to text content
+
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 4.dp)) { // Add slight start padding to text content
+
+                Text(
+                    text = "${toUpperCase(task.priority)} PRIORITY",
+                    style = AppTypography.bodySmall.copy(
+                        color = if (task.isCompleted) Color.Gray else priorityFontColor
+                    ),
+                    modifier = Modifier.padding(top = 2.dp),
+                    fontStyle = FontStyle.Italic,
+                    fontWeight = FontWeight.W400
+                )
+
                 Text(
                     text = task.title,
+                    modifier = Modifier.padding(vertical = 4.dp),
                     style = AppTypography.titleMedium.copy(
                         textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
                         color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.onSurface
                     ),
                     fontWeight = FontWeight.Bold
                 )
+                task.deadline?.let {
+                    Text(
+                        text = "Deadline: ${it.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT))}",
+                        modifier = Modifier.padding(top = 0.dp),
+                        style = AppTypography.bodySmall.copy(
+                            color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.tertiary
+                        )
+                    )
+                }
                 task.description?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         text = it,
                         style = AppTypography.bodySmall.copy(
                             textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
                             color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        ),
+                        modifier = Modifier.padding(top = 4.dp).animateContentSize(),
+                        maxLines = if(isExpanded) Int.MAX_VALUE else 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                task.deadline?.let {
-                    Text(
-                        text = "Deadline: ${it.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT))}",
-                        style = AppTypography.bodySmall.copy(
-                            color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.tertiary
-                        )
-                    )
-                }
-                Text(
-                    text = "Priority: ${task.priority}",
-                    style = AppTypography.bodySmall.copy(
-                        color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.secondary
-                    )
-                )
-            }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Filled.Edit, "Edit Task", tint = MaterialTheme.colorScheme.secondary)
+
+
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Filled.Delete, "Delete Task", tint = MaterialTheme.colorScheme.error)
             }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Filled.Edit, "Edit Task", tint = MaterialTheme.colorScheme.secondary)
+            }
+
+
+
         }
     }
 }

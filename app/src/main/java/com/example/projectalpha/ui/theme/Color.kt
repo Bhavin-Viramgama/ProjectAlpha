@@ -29,6 +29,7 @@ val HighPriorityFont = Color(0xFFC62828) // Dark red
 val MediumPriorityFont = Color(0xFFB28704) // Dark golden amber
 val LowPriorityFont = Color(0xFF2E7D32) // Dark green
 
+
 val HighPriorityColor = Color(0xFFFF8A80) // Pastel Red
 val MediumPriorityColor = Color(0xFFFFE082) // Pastel Amber
 val LowPriorityColor = Color(0xFFA5D6A7) // Pastel Green

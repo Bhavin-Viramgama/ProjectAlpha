@@ -1,9 +1,11 @@
 package com.example.projectalpha.ui.screen.home
 
 import android.icu.lang.UCharacter.toUpperCase
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +18,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,10 +71,6 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Monthly Tasks: $monthlyTaskCount",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
                     "Today's Total Tasks: $todaysTaskCount",
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -90,12 +91,12 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 50.dp, vertical = 10.dp),
+                    .padding(horizontal = 40.dp, vertical = 10.dp),
                 singleLine = true,
                 shape = RoundedCornerShape(24),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xfff5f5f5), //CotainerBG
-                    unfocusedContainerColor = Color(0xfff5f5f5),
+                    focusedContainerColor = MaterialTheme.colorScheme.surface, //CotainerBG
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     focusedIndicatorColor = Color(0xFF3F51B5), //Border
                     unfocusedIndicatorColor = Color.LightGray,
                     cursorColor = Color(0xFF3F51B5),
@@ -105,7 +106,7 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
                     unfocusedPlaceholderColor = Color.Gray
                 ),
                 trailingIcon = {
-                    IconButton(onClick = {  }) {
+                    IconButton(onClick = { /*TODO: Clear Search*/ }) {
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Clear"
@@ -128,11 +129,10 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
                     modifier = Modifier
                         .border(
                             width = 1.dp,
-                            color = Color(0xFF3F51B5),
+                            color = Color.LightGray,
                             shape = RoundedCornerShape(16.dp)
                         )
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xfff5f5f5)),
+                        .clip(RoundedCornerShape(16.dp)),
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Text(text = "See all", style = MaterialTheme.typography.labelMedium)
@@ -182,13 +182,18 @@ fun TaskCard(task: TaskEntity, timeFormatter: DateTimeFormatter) {
         else -> Color.Transparent
     }
 
+    //For Clickable Expansion of the card
+    var isExpanded by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
+            .clickable{isExpanded = !isExpanded}
             .fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp,priorityFontColor),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
+
+
         Column (
             modifier = Modifier
                 .fillMaxWidth()
@@ -228,31 +233,24 @@ fun TaskCard(task: TaskEntity, timeFormatter: DateTimeFormatter) {
                 .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             Column(modifier = Modifier.weight(1f)) {
                 task.description?.let {
                     if (it.isNotBlank()) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = it,
+                            modifier = Modifier.animateContentSize(),
                             style = MaterialTheme.typography.bodySmall,
                             fontStyle = FontStyle.Italic,
-                            maxLines = 2, // Limit description lines
-                            overflow = TextOverflow.Ellipsis // Shows "..." if text exceeds
-                        )
-                    }else{
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Add Task Description...",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontStyle = FontStyle.Italic,
-                            maxLines = 2, // Limit description lines
+                            maxLines = if(isExpanded) Int.MAX_VALUE else 1,
                             overflow = TextOverflow.Ellipsis // Shows "..." if text exceeds
                         )
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
                 task.deadline?.let { deadline ->
+                    Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(id = R.drawable.timeline),

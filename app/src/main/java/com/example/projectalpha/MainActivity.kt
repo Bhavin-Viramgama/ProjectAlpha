@@ -1,56 +1,67 @@
 package com.example.projectalpha
 
-import androidx.lifecycle.viewmodel.compose.viewModel // For viewModel()
-import com.example.projectalpha.viewmodel.HomeViewModel
-import com.example.projectalpha.viewmodel.HomeViewModelFactory
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.navigation.NavHostController
-import androidx.compose.material3.ExperimentalMaterial3Api
+import android.icu.lang.UCharacter.toUpperCase
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.*
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import com.example.projectalpha.ui.navigation.Screen
-import com.example.projectalpha.ui.navigation.bottomNavItems
-import com.example.projectalpha.ui.screen.habits.HabitsScreen
-import com.example.projectalpha.ui.screen.home.HomeScreen
-import com.example.projectalpha.ui.screen.pomodoro.PomodoroScreen
-import com.example.projectalpha.ui.screen.profile.ProfileScreen
-import com.example.projectalpha.ui.screen.todo.ToDoScreen
+import androidx.room.util.TableInfo
+import com.example.projectalpha.data.local.entity.TaskEntity
+import com.example.projectalpha.ui.theme.AppTypography
+import com.example.projectalpha.ui.theme.HighPriorityFont
+import com.example.projectalpha.ui.theme.LowPriorityFont
+import com.example.projectalpha.ui.theme.MediumPriorityFont
 import com.example.projectalpha.ui.theme.ProjectAlphaTheme
-import com.example.projectalpha.viewmodel.HabitsViewModel
-import com.example.projectalpha.viewmodel.HabitsViewModelFactory
-import com.example.projectalpha.viewmodel.PomodoroViewModel
-import com.example.projectalpha.viewmodel.PomodoroViewModelFactory
-import com.example.projectalpha.viewmodel.ToDoViewModel
-import com.example.projectalpha.viewmodel.ToDoViewModelFactory
-import com.example.projectalpha.viewmodel.* // Import all your ViewModels and Factories
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 
 class MainActivity : ComponentActivity() {
@@ -64,169 +75,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ProjectAlphaApp() {
-    val navController = rememberNavController()
-    val application = LocalContext.current.applicationContext as ProjectAlphaApplication
 
-    // ViewModel Instantiations
-    val homeViewModel: HomeViewModel = viewModel(
-        factory = HomeViewModelFactory(application.taskRepository, application.streakRepository)
-    )
-    val toDoViewModel: ToDoViewModel = viewModel(
-        factory = ToDoViewModelFactory(application.taskRepository)
-    )
-    val pomodoroViewModel: PomodoroViewModel = viewModel(
-        factory = PomodoroViewModelFactory(application.streakRepository)
-    )
-    val habitsViewModel: HabitsViewModel = viewModel(
-        factory = HabitsViewModelFactory(application.habitRepository)
-    )
-    // Assuming you have UserRepository and ProfileViewModelFactory defined
-    // For now, let's placeholder it or create a simple one if not ready
-    val profileViewModel: ProfileViewModel = viewModel(
-        factory = ProfileViewModelFactory(
-            application.userRepository, // Make sure userRepository is in Application
-            application.streakRepository,
-            application.taskRepository
-        )
-    )
-    // ---
-
-    val streakEntity by homeViewModel.streakPoints.collectAsState() // Observe from HomeViewModel
-    val streakPointsDisplay = streakEntity?.points ?: 0
-
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-
-    val currentScreenTitle = bottomNavItems.find { it.route == currentDestination?.route }?.title
-        ?: Screen.Profile.title.takeIf { currentDestination?.route == Screen.Profile.route }
-        ?: Screen.Home.title ?: "Project Alpha" // Default title
-
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(currentScreenTitle, style = MaterialTheme.typography.titleLarge) },
-                actions = {
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .padding(2.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color(0xFF212121))
-                            .padding(4.dp)) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.firefill),
-                            modifier = Modifier.size(24.dp),
-                            contentDescription = "Streak Points",
-                            tint = Color.Unspecified
-                        )
-                        Text(
-                            text = streakPointsDisplay.toString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
-                            modifier = Modifier.padding(start = 4.dp, end = 8.dp)
-                        )
-                    }
-                    IconButton(onClick = { navController.navigate(Screen.Profile.route) }) {
-                        Icon(Icons.Filled.AccountCircle, "Profile")
-                    }
-                },
-                scrollBehavior = scrollBehavior
-            )
-        },
-        bottomBar = {
-            val isBottomBarVisible = bottomNavItems.any { it.route == currentDestination?.route }
-            if (isBottomBarVisible) {
-                AppBottomNavigationBar(navController = navController, items = bottomNavItems)
-            }
-        }
-    ) { innerPadding ->
-        AppNavHost(
-            navController = navController,
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize(),
-            homeViewModel = homeViewModel,
-            toDoViewModel = toDoViewModel,
-            pomodoroViewModel = pomodoroViewModel,
-            habitsViewModel = habitsViewModel,
-            profileViewModel = profileViewModel // Pass the ProfileViewModel
-        )
-    }
-}
 
 @Composable
-fun AppBottomNavigationBar(navController: NavHostController, items: List<Screen>) {
-    NavigationBar {
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentDestination = navBackStackEntry?.destination
-
-        items.forEach { screen ->
-            NavigationBarItem(
-                icon = {
-                    screen.icon?.let { icon ->
-                        Icon(icon, contentDescription = screen.title)
-                    }
-                },
-                label = { Text(screen.title ?: "") },
-                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                onClick = {
-                    navController.navigate(screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun AppNavHost(
-    navController: NavHostController,
-    modifier: Modifier = Modifier,
-    homeViewModel: HomeViewModel,
-    toDoViewModel: ToDoViewModel,       // Add ToDoViewModel as a parameter
-    pomodoroViewModel: PomodoroViewModel, // Add PomodoroViewModel
-    habitsViewModel: HabitsViewModel,   // Add HabitsViewModel
-    profileViewModel: ProfileViewModel  // Add ProfileViewModel
-) {
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Home.route,
-        modifier = modifier
-    ) {
-        composable(Screen.Home.route) {
-            HomeScreen(homeViewModel = homeViewModel)
-        }
-        composable(Screen.ToDoList.route) {
-            ToDoScreen(toDoViewModel = toDoViewModel) // Pass the ToDoViewModel
-        }
-        composable(Screen.Pomodoro.route) {
-            PomodoroScreen(pomodoroViewModel = pomodoroViewModel) // Pass the PomodoroViewModel
-        }
-        composable(Screen.Habits.route) {
-            HabitsScreen(habitsViewModel = habitsViewModel) // Pass the HabitsViewModel
-        }
-        composable(Screen.Profile.route) {
-            ProfileScreen(profileViewModel = profileViewModel) // Pass the ProfileViewModel
-        }
-    }
-}
-
-/*@Composable
 fun TaskCardPreview() {
     val dummyTask = TaskEntity(
         id = 1,
         title = "Finish Kotlin Project",
-        description = "Complete the Jetpack Compose UI and test all features before the deadline.",
+        description = "Complete the Jetpack Compose UI and test all features before the deadline.\nComplete the Jetpack Compose UI and test all features before the deadline.",
         deadline = LocalDateTime.now().plusHours(5), // 5 hours from now
         priority = "high",
         isCompleted = false,
@@ -235,7 +91,128 @@ fun TaskCardPreview() {
 
     val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a") // Example format
 
-    TaskCard(task = dummyTask, timeFormatter = timeFormatter)
+    TaskItem(task = dummyTask, onToggleComplete = {}, onEdit = {}, onDelete = {})
+//    LazyColumn(
+//                    modifier = Modifier.fillMaxSize(),
+//                    verticalArrangement = Arrangement.spacedBy(8.dp)
+//                ) {
+//                    items(tasks, key = { task -> task.id }) { task ->
+//                        TaskItem(
+//                            task = task,
+//                            onToggleComplete = { toDoViewModel.toggleTaskCompletion(task) },
+//                            onEdit = {
+//                                taskToEdit = task
+//                                showAddTaskDialog = true
+//                            },
+//                            onDelete = { taskToDelete = task }
+//                        )
+//                    }
+//                }
+}
+
+@Composable
+fun TaskItem(
+    task: TaskEntity,
+    onToggleComplete: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    // We keep track if the message is expanded or not in this
+    // variable
+    var isExpanded by remember { mutableStateOf(false) }
+
+    val surfaceColor by animateColorAsState(
+        if(isExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+    )
+    val priorityFontColor = when (task.priority.lowercase()) {
+        "high" -> HighPriorityFont // Solid color for indicator
+        "medium" -> MediumPriorityFont
+        "low" -> LowPriorityFont
+        else -> Color.Transparent
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 0.dp, top = 8.dp, end = 8.dp, bottom = 8.dp), // Adjust padding for Checkbox
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Use Checkbox for toggling completion
+            Checkbox(
+                checked = task.isCompleted,
+                onCheckedChange = { onToggleComplete() }, // ViewModel handles the actual state change
+                colors = CheckboxDefaults.colors(
+                    checkedColor = MaterialTheme.colorScheme.primary,
+                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant // Or a more subtle color
+                ),
+                modifier = Modifier.padding(horizontal = 4.dp) // Add some padding around checkbox
+            )
+            // Removed Spacer as Checkbox has its own padding/touch target considerations
+
+
+
+            Column(
+                modifier = Modifier
+                .weight(1f)
+                .padding(start = 4.dp)) { // Add slight start padding to text content
+
+                Text(
+                    text = "${toUpperCase(task.priority)} PRIORITY",
+                    style = AppTypography.bodySmall.copy(
+                        color = if (task.isCompleted) Color.Gray else priorityFontColor
+                    ),
+                    modifier = Modifier.padding(top = 2.dp),
+                    fontStyle = FontStyle.Italic,
+                    fontWeight = FontWeight.W400
+                )
+
+                Text(
+                    text = task.title,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    style = AppTypography.titleMedium.copy(
+                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
+                        color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.onSurface
+                    ),
+                    fontWeight = FontWeight.Bold
+                )
+                task.deadline?.let {
+                    Text(
+                        text = "Deadline: ${it.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT))}",
+                        modifier = Modifier.padding(top = 0.dp),
+                        style = AppTypography.bodySmall.copy(
+                            color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.tertiary
+                        )
+                    )
+                }
+                task.description?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        text = it,
+                        style = AppTypography.bodySmall.copy(
+                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
+                            color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        modifier = Modifier.padding(top = 4.dp),
+                        maxLines = if(isExpanded) Int.MAX_VALUE else 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Filled.Delete, "Delete Task", tint = MaterialTheme.colorScheme.error)
+            }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Filled.Edit, "Edit Task", tint = MaterialTheme.colorScheme.secondary)
+            }
+
+
+
+        }
+    }
 }
 
 
@@ -243,17 +220,23 @@ fun TaskCardPreview() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
-fun prev(){
+fun Prev(){
     ProjectAlphaTheme {
             Scaffold(
             ) { innerPadding ->
-                Surface(Modifier.padding(innerPadding)) {
-                    Column(Modifier.padding(16.dp)){
+                Surface (Modifier.padding(innerPadding)){
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TaskCardPreview()
                         TaskCardPreview()
                     }
+
                 }
+
             }
     }
 }
 
- */
+
