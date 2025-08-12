@@ -83,14 +83,20 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
             ) {
-                Button(onClick = { toDoViewModel.selectDate(selectedDate.minusDays(1))}) {
+                Button(onClick = {
+                    toDoViewModel.selectDate(selectedDate.minusDays(1))
+                    //toDoViewModel.loadTasksForDate12(selectedDate)
+                }) {
                     Text("<")
                 }
                 Text(
                     selectedDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
                     style = AppTypography.titleLarge
                 )
-                Button(onClick = { toDoViewModel.selectDate(selectedDate.plusDays(1)) }) {
+                Button(onClick = {
+                    toDoViewModel.selectDate(selectedDate.plusDays(1))
+                    //toDoViewModel.loadTasksForDate12(selectedDate)
+                }) {
                     Text(">")
                 }
             }

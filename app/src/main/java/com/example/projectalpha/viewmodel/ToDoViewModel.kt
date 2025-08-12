@@ -5,14 +5,17 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.data.repository.TaskRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ToDoViewModel(private val taskRepository: TaskRepository) : ViewModel() {
 
     // Represents tasks associated with the _selectedDate
@@ -28,14 +31,56 @@ class ToDoViewModel(private val taskRepository: TaskRepository) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    /*    This was the Problem!,
+In loadTasksForDateInternal:
+    viewModelScope.launch {
+        taskRepository.getTasksForDate(date)
+            .collect { tasks -> ... }
+    }
+
+    Every time selectedDate changes, you launch a new coroutine that starts collecting from getTasksForDate(date) without cancelling the previous collector.
+So after navigating dates multiple times, you might have:
+
+Collector for Date A
+Collector for Date B
+Collector for Date C
+...all active at the same time.
+
+When you update a task in Date A’s Flow, that collector still emits into _tasksForSelectedDate, overwriting Date C’s list in your UI.
+Fix: Use flatMapLatest so only the latest selected date’s Flow is active.
+This automatically cancels the old collector when the date changes.
+*/
+    /*
+        init {
+            // Observe changes to selectedDate and reload tasks
+           viewModelScope.launch {
+               selectedDate.collect { date ->
+                  loadTasksForDateInternal(date)
+              }
+           }
+       }
+
+     */
     init {
-        // Observe changes to selectedDate and reload tasks
         viewModelScope.launch {
-            selectedDate.collect { date ->
-                loadTasksForDateInternal(date)
-            }
+            selectedDate
+                .flatMapLatest { date ->
+                    _isLoading.value = true
+                    taskRepository.getTasksForDate(date)
+                }
+                .catch { e ->
+                    _error.value = "Failed to load tasks: ${e.message}"
+                    _isLoading.value = false
+                }
+                .collect { tasks ->
+                    _tasksForSelectedDate.value = tasks
+                    _isLoading.value = false
+                    _error.value = null
+                }
         }
     }
+
+
 
     fun selectDate(date: LocalDate) {
         _selectedDate.value = date
@@ -84,10 +129,10 @@ class ToDoViewModel(private val taskRepository: TaskRepository) : ViewModel() {
             try {
                 _isLoading.value = true
                 taskRepository.insertTask(newTask)
-                // The flow from loadTasksForDateInternal should pick up the new task automatically
-                // if the selectedDate matches the taskDate of the new task.
-                // If not, you might want to explicitly call loadTasksForDateInternal(_selectedDate.value)
-                // or ensure your UI updates based on the current _selectedDate.
+                /*  The flow from loadTasksForDateInternal should pick up the new task automatically
+                    if the selectedDate matches the taskDate of the new task.
+                    If not, you might want to explicitly call loadTasksForDateInternal(_selectedDate.value)
+                    or ensure your UI updates based on the current _selectedDate.*/
                 _isLoading.value = false
             } catch (e: Exception) {
                 _error.value = "Failed to add task: ${e.message}"
@@ -112,12 +157,12 @@ class ToDoViewModel(private val taskRepository: TaskRepository) : ViewModel() {
     fun toggleTaskCompletion(task: TaskEntity) {
         viewModelScope.launch {
             try {
-                _isLoading.value = true
+                //_isLoading.value = true
                 taskRepository.updateTask(task.copy(isCompleted = !task.isCompleted))
-                _isLoading.value = false
+                //_isLoading.value = false
             } catch (e: Exception) {
                 _error.value = "Failed to update task completion: ${e.message}"
-                _isLoading.value = false
+                //_isLoading.value = false
             }
         }
     }
