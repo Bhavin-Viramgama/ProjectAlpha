@@ -1,15 +1,23 @@
 package com.example.projectalpha.ui.screen.todo
 
+import kotlinx.coroutines.launch
 import android.icu.lang.UCharacter.toUpperCase
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
@@ -24,7 +32,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -35,9 +42,13 @@ import androidx.compose.ui.window.Dialog
 import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.ui.theme.AppTypography
 import com.example.projectalpha.ui.theme.HighPriorityFont
+import com.example.projectalpha.ui.theme.HighPriorityFont1
 import com.example.projectalpha.ui.theme.LowPriorityFont
+import com.example.projectalpha.ui.theme.LowPriorityFont1
 import com.example.projectalpha.ui.theme.MediumPriorityFont
+import com.example.projectalpha.ui.theme.MediumPriorityFont1
 import com.example.projectalpha.viewmodel.ToDoViewModel
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -46,7 +57,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ToDoScreen(toDoViewModel: ToDoViewModel) {
     val tasks by toDoViewModel.tasksForSelectedDate.collectAsState()
@@ -57,6 +68,19 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var taskToEdit by remember { mutableStateOf<TaskEntity?>(null) }
     var taskToDelete by remember { mutableStateOf<TaskEntity?>(null) }
+
+    //Code for animation-----------------------------------------------
+    val visibleStates = remember { mutableStateMapOf<Int, Boolean>() }
+
+    // Trigger staggered animation on load or when tasks change
+    LaunchedEffect(tasks) {
+        visibleStates.clear()
+        tasks.forEachIndexed { index, task ->
+            //delay(index * 50L) // delay for staggered animation Like Home Screen
+            visibleStates[task.id] = true
+        }
+    }
+    //-----------------------------------------------Code for animation
 
     Scaffold(
         floatingActionButton = {
@@ -124,20 +148,35 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
                     modifier = Modifier.padding(16.dp)
                 )
             } else if (!isLoading && error == null) {
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(tasks, key = { task -> task.id }) { task ->
-                        TaskItem(
-                            task = task,
-                            onToggleComplete = { toDoViewModel.toggleTaskCompletion(task) },
-                            onEdit = {
-                                taskToEdit = task
-                                showAddTaskDialog = true
-                            },
-                            onDelete = { taskToDelete = task }
-                        )
+
+                        val visible = visibleStates[task.id] ?: false
+                        //For Animated Items
+                        AnimatedVisibility(
+                            visible = visible,
+                            enter = fadeIn(animationSpec = tween(300)) +
+                                    slideInVertically(initialOffsetY = { it / 2 }),
+                            exit = fadeOut(animationSpec = tween(300)) +
+                                    slideOutVertically(targetOffsetY = { it / 2 }),
+                            modifier = Modifier.animateItem()
+                        ) {
+                            TaskItem(
+                                task = task,
+                                onToggleComplete = { toDoViewModel.toggleTaskCompletion(task) },
+                                onEdit = {
+                                    taskToEdit = task
+                                    showAddTaskDialog = true
+                                },
+                                onDelete = {
+                                        taskToDelete = task
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -169,12 +208,19 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
         )
     }
 
+    val coroutineScope = rememberCoroutineScope()
     taskToDelete?.let { task ->
         ConfirmDeleteDialog(
             taskTitle = task.title,
             onDismiss = { taskToDelete = null },
             onConfirm = {
-                toDoViewModel.deleteTask(task)
+                // Wait until animation finishes before removing from list
+                coroutineScope.launch {
+                    delay(100) //TODO Here is a bug, if user deletes a task and if he switches tab then coroutine will be destroyed and task will not be deleted!
+                    visibleStates[task.id] = false
+                    delay(300)
+                    toDoViewModel.deleteTask(task)
+                }
                 taskToDelete = null
             }
         )
@@ -196,14 +242,16 @@ fun TaskItem(
         if(isExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
     )
     val priorityFontColor = when (task.priority.lowercase()) {
-        "high" -> HighPriorityFont // Solid color for indicator
-        "medium" -> MediumPriorityFont
-        "low" -> LowPriorityFont
+        "high" -> HighPriorityFont1 // Solid color for indicator
+        "medium" -> MediumPriorityFont1
+        "low" -> LowPriorityFont1
         else -> Color.Transparent
     }
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clickable { isExpanded = !isExpanded },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+
     ) {
         Row(
             modifier = Modifier
@@ -304,6 +352,9 @@ fun AddTaskDialog(
     var deadlineTimePart by rememberSaveable { mutableStateOf(taskToEdit?.deadline?.toLocalTime() ?: LocalTime.NOON) }
     var hasDeadline by rememberSaveable { mutableStateOf(taskToEdit?.deadline != null) }
 
+    //Subtasks!
+    var hasSubTasks by rememberSaveable { mutableStateOf(false) }
+
     val priorities = listOf("High", "Medium", "Low")
     var priority by rememberSaveable { mutableStateOf(taskToEdit?.priority ?: "Medium") }
     var priorityExpanded by remember { mutableStateOf(false) }
@@ -320,6 +371,7 @@ fun AddTaskDialog(
             Column(
                 modifier = Modifier
                     .padding(16.dp)
+                    .verticalScroll(rememberScrollState()) // <-- enables scrolling
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -351,6 +403,19 @@ fun AddTaskDialog(
                         .fillMaxWidth()
                         .heightIn(min = 80.dp)
                 )
+
+                //Column(modifier = Modifier.animateContentSize()) {} //For Smooth animation of the subtask wala part
+//                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+//                        Checkbox(checked = hasSubTasks, onCheckedChange = { hasSubTasks = it })
+//                        Text("Set Subtasks")
+//                    }
+//
+//                    if(hasSubTasks){
+//                        //TextField(value = "TODO()",onValueChange = {TODO()})
+//                            Text("Subtask1:")
+//                    }
+
+
 
                 OutlinedButton(
                     onClick = { showTaskDatePickerDialog = true },

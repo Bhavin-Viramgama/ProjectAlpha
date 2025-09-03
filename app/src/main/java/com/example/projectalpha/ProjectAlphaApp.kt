@@ -15,6 +15,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -39,6 +40,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.projectalpha.ui.navigation.Screen
+import com.example.projectalpha.ui.theme.HighPriorityFont1
 import com.example.projectalpha.ui.navigation.bottomNavItems
 import com.example.projectalpha.ui.screen.habits.HabitsScreen
 import com.example.projectalpha.ui.screen.home.HomeScreen
@@ -71,7 +73,7 @@ fun ProjectAlphaApp() {
         factory = ToDoViewModelFactory(application.taskRepository)
     )
     val pomodoroViewModel: PomodoroViewModel = viewModel(
-        factory = PomodoroViewModelFactory(application.streakRepository)
+        factory = PomodoroViewModelFactory()
     )
     val habitsViewModel: HabitsViewModel = viewModel(
         factory = HabitsViewModelFactory(application.habitRepository)
@@ -154,19 +156,18 @@ fun ProjectAlphaApp() {
 
 @Composable
 fun AppBottomNavigationBar(navController: NavHostController, items: List<Screen>) {
-    NavigationBar {
+    NavigationBar(
+        containerColor = Color(0xFF1E1E1E), // background
+        tonalElevation = 8.dp,
+        modifier = Modifier.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+    ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
+
         items.forEach { screen ->
+            val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
             NavigationBarItem(
-                icon = {
-                    screen.icon?.let { icon ->
-                        Icon(icon, contentDescription = screen.title)
-                    }
-                },
-                label = { Text(screen.title ?: "") },
-                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                 onClick = {
                     navController.navigate(screen.route) {
                         popUpTo(navController.graph.findStartDestination().id) {
@@ -175,7 +176,22 @@ fun AppBottomNavigationBar(navController: NavHostController, items: List<Screen>
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                icon = {
+                    screen.icon?.let { icon ->
+                        Icon(icon, contentDescription = screen.title, tint = if (selected) Color(0xFF9B4DFF) else Color.Gray)
+                    }
+                },
+                label = { Text(screen.title ?: "") },
+                selected = selected,
+                colors = NavigationBarItemDefaults.colors(
+                    indicatorColor = Color(0xFF9B4DFF).copy(alpha = 0.15f),
+                    selectedIconColor = Color(0xFF9B4DFF),
+                    unselectedIconColor = Color.Gray,
+                    selectedTextColor = Color(0xFF9B4DFF),
+                    unselectedTextColor = Color.Gray
+                )
+
             )
         }
     }
@@ -197,7 +213,10 @@ fun AppNavHost(
         modifier = modifier
     ) {
         composable(Screen.Home.route) {
-            HomeScreen(homeViewModel = homeViewModel)
+            HomeScreen(
+                navController = navController, //for navigation to todoScreen on press see all button
+                homeViewModel = homeViewModel
+            )
         }
         composable(Screen.ToDoList.route) {
             ToDoScreen(toDoViewModel = toDoViewModel) // Pass the ToDoViewModel

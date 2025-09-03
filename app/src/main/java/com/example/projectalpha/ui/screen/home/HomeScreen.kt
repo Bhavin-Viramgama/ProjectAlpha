@@ -1,8 +1,15 @@
 package com.example.projectalpha.ui.screen.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import android.icu.lang.UCharacter.toUpperCase
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,8 +23,10 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,19 +40,27 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.rememberNavController
+import com.example.projectalpha.AppNavHost
 import com.example.projectalpha.R
 import com.example.projectalpha.data.local.entity.TaskEntity
+import com.example.projectalpha.ui.navigation.Screen
 import com.example.projectalpha.ui.theme.*
 import com.example.projectalpha.viewmodel.HomeViewModel
+import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
+import kotlin.collections.set
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(homeViewModel: HomeViewModel) {
+fun HomeScreen(navController: NavController,homeViewModel: HomeViewModel) {
     val username by homeViewModel.username.collectAsState()
     val todaysTaskCount by homeViewModel.todaysTaskCount.collectAsState()
-    val streakEntity by homeViewModel.streakPoints.collectAsState()
+    //val streakEntity by homeViewModel.streakPoints.collectAsState()
     val todaysTasks by homeViewModel.todaysTasks.collectAsState()
+    //val navController = rememberNavController()
 
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm a")
 
@@ -124,7 +141,14 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
             ) {
                 Text("Today's Tasks", style = MaterialTheme.typography.titleLarge)
                 TextButton(
-                    onClick = { /* TODO: Navigate to To Do List screen */ },
+                    onClick = { navController.navigate(Screen.ToDoList.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }/* TODO: Navigate to To Do List screen */ },
+                    /*For Border
                     modifier = Modifier
                         .border(
                             width = 1.dp,
@@ -133,6 +157,7 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
                         )
                         .clip(RoundedCornerShape(16.dp)),
                     contentPadding = PaddingValues(0.dp)
+                     */
                 ) {
                     Text(text = "See all", style = MaterialTheme.typography.labelMedium)
                 }
@@ -151,7 +176,29 @@ fun HomeScreen(homeViewModel: HomeViewModel) {
                     verticalArrangement = Arrangement.spacedBy(8.dp) // Spacing between items
                 ) {
                     items(todaysTasks, key = { task -> task.id }) { task ->
-                        TaskCard(task = task, timeFormatter = timeFormatter)
+
+                        val visibleStates = remember { mutableStateMapOf<Int, Boolean>() }
+
+                        // Trigger animation when this item enters composition
+                        LaunchedEffect(todaysTasks) {
+                            visibleStates.clear()
+                            todaysTasks.forEachIndexed { index, task ->
+                                delay(index * 80L) // delay for staggered animation
+                                visibleStates[task.id] = true
+                            }
+                        }
+                        val visible = visibleStates[task.id] ?: false
+
+                        AnimatedVisibility(
+                            visible = visible,
+                            enter = fadeIn(animationSpec = tween(300)) +
+                                    slideInVertically(initialOffsetY = { it / 2 }),
+                            exit = fadeOut(animationSpec = tween(300)) +
+                                    slideOutVertically(targetOffsetY = { it / 2 }),
+                            modifier = Modifier.animateItem()
+                        )  {
+                            TaskCard(task = task, timeFormatter = timeFormatter)
+                        }
                     }
                 }
             }
@@ -175,21 +222,32 @@ fun TaskCard(task: TaskEntity, timeFormatter: DateTimeFormatter) {
         else -> Color.Transparent
     }
     val priorityFontColor = when (task.priority.lowercase()) {
-        "high" -> HighPriorityFont // Solid color for indicator
+        "high" -> HighPriorityFont
         "medium" -> MediumPriorityFont
         "low" -> LowPriorityFont
+        else -> Color.Transparent
+    }
+    val priorityFontColor2 = when (task.priority.lowercase()) {
+        "high" -> HighPriorityFont2
+        "medium" -> MediumPriorityFont2
+        "low" -> LowPriorityFont2
+        else -> Color.Transparent
+    }
+    val priorityFontColor1 = when (task.priority.lowercase()) {
+        "high" -> HighPriorityFont1
+        "medium" -> MediumPriorityFont1
+        "low" -> LowPriorityFont1
         else -> Color.Transparent
     }
 
     //For Clickable Expansion of the card
     var isExpanded by remember { mutableStateOf(false) }
     Card(
-        modifier = Modifier
-            .clickable{isExpanded = !isExpanded}
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp)
+            .clickable{isExpanded = !isExpanded},
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp,priorityFontColor),
-        colors = CardDefaults.cardColors(containerColor = cardColor)
+        //border = BorderStroke(1.dp,priorityFontColor),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
 
 
@@ -205,7 +263,7 @@ fun TaskCard(task: TaskEntity, timeFormatter: DateTimeFormatter) {
                 style = MaterialTheme.typography.bodySmall,
                 fontStyle = FontStyle.Italic,
                 fontWeight = FontWeight.W400,
-                color = priorityFontColor
+                color = priorityFontColor1
             )
             Row(Modifier.padding(top=8.dp),
                 horizontalArrangement = Arrangement.Center) {
@@ -214,7 +272,7 @@ fun TaskCard(task: TaskEntity, timeFormatter: DateTimeFormatter) {
                     modifier = Modifier
                         .size(16.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(priorityIndicatorColor)
+                        .background(priorityFontColor2)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
@@ -239,7 +297,7 @@ fun TaskCard(task: TaskEntity, timeFormatter: DateTimeFormatter) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = it,
-                            modifier = Modifier.animateContentSize(),
+                            modifier = Modifier.fillMaxWidth().animateContentSize(),
                             style = MaterialTheme.typography.bodySmall,
                             fontStyle = FontStyle.Italic,
                             maxLines = if(isExpanded) Int.MAX_VALUE else 1,

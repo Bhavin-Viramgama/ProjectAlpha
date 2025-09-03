@@ -3,25 +3,32 @@ package com.example.projectalpha.viewmodel
 import android.os.CountDownTimer // Using classic Android CountDownTimer for simplicity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import com.example.projectalpha.data.repository.StreakRepository // To update streak on session completion
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.update
 
-// Default Pomodoro times in seconds
-const val WORK_DURATION_SECONDS = 25 * 60
-const val SHORT_BREAK_DURATION_SECONDS = 5 * 60
-const val LONG_BREAK_DURATION_SECONDS = 15 * 60
+// Default Pomodoro times in seconds - these will be our initial values
+const val DEFAULT_WORK_DURATION_SECONDS = 25 * 60
+const val DEFAULT_SHORT_BREAK_DURATION_SECONDS = 5 * 60
+const val DEFAULT_LONG_BREAK_DURATION_SECONDS = 15 * 60
 
 enum class PomodoroSessionType { WORK, SHORT_BREAK, LONG_BREAK }
 
-class PomodoroViewModel(
-    private val streakRepository: StreakRepository // Inject if you update streak
-) : ViewModel() {
+// Data class to hold custom durations
+data class PomodoroDurations(
+    val work: Int = DEFAULT_WORK_DURATION_SECONDS,
+    val shortBreak: Int = DEFAULT_SHORT_BREAK_DURATION_SECONDS,
+    val longBreak: Int = DEFAULT_LONG_BREAK_DURATION_SECONDS
+)
 
-    private val _timeRemainingSeconds = MutableStateFlow(WORK_DURATION_SECONDS)
+class PomodoroViewModel : ViewModel() { // Removed StreakRepository
+
+    private val _customDurations = MutableStateFlow(PomodoroDurations())
+    val customDurations: StateFlow<PomodoroDurations> = _customDurations.asStateFlow()
+
+    private val _timeRemainingSeconds = MutableStateFlow(_customDurations.value.work)
     val timeRemainingSeconds: StateFlow<Int> = _timeRemainingSeconds.asStateFlow()
 
     private val _isRunning = MutableStateFlow(false)
@@ -33,6 +40,11 @@ class PomodoroViewModel(
     private var workSessionsCompleted = 0
     private var countDownTimer: CountDownTimer? = null
 
+    init {
+        // Initialize time remaining based on the current (default) session type and custom durations
+        _timeRemainingSeconds.value = getDurationForSessionType(_currentSessionType.value)
+    }
+
     fun startPauseTimer() {
         if (_isRunning.value) {
             pauseTimer()
@@ -42,6 +54,8 @@ class PomodoroViewModel(
     }
 
     private fun startTimer() {
+        if (_timeRemainingSeconds.value <= 0) return // Don't start if time is zero
+
         _isRunning.value = true
         countDownTimer = object : CountDownTimer(_timeRemainingSeconds.value * 1000L, 1000) {
             override fun onTick(millisUntilFinished: Long) {
@@ -66,13 +80,10 @@ class PomodoroViewModel(
 
     private fun handleSessionFinished() {
         _isRunning.value = false
-        // Potentially award points or log completion
+        // Streak logic removed
         if (_currentSessionType.value == PomodoroSessionType.WORK) {
             workSessionsCompleted++
-            viewModelScope.launch {
-                streakRepository.incrementStreakPoints(1) // Example: 1 point per work session
-            }
-            if (workSessionsCompleted % 4 == 0) { // Long break after 4 work sessions
+            if (workSessionsCompleted % 4 == 0 && workSessionsCompleted > 0) { // Long break after 4 work sessions
                 _currentSessionType.value = PomodoroSessionType.LONG_BREAK
             } else {
                 _currentSessionType.value = PomodoroSessionType.SHORT_BREAK
@@ -86,31 +97,57 @@ class PomodoroViewModel(
 
     fun skipSession() {
         pauseTimer()
-        handleSessionFinished() // Similar logic to finishing a session
+        // Reset work sessions count if skipping a break to ensure next long break is correct
+        if (_currentSessionType.value != PomodoroSessionType.WORK) {
+            // If skipping a break, and it was supposed to be a long break,
+            // we effectively "reset" the cycle for the next long break count
+            // or if it's a short break, just move to work.
+            // This logic can be refined based on exact desired skip behavior for long breaks.
+        }
+        handleSessionFinished()
     }
 
-    internal fun getDurationForSessionType(type: PomodoroSessionType): Int {
+    // Public getter for UI to know max duration
+    fun getDurationForSessionType(type: PomodoroSessionType): Int {
         return when (type) {
-            PomodoroSessionType.WORK -> WORK_DURATION_SECONDS
-            PomodoroSessionType.SHORT_BREAK -> SHORT_BREAK_DURATION_SECONDS
-            PomodoroSessionType.LONG_BREAK -> LONG_BREAK_DURATION_SECONDS
+            PomodoroSessionType.WORK -> _customDurations.value.work
+            PomodoroSessionType.SHORT_BREAK -> _customDurations.value.shortBreak
+            PomodoroSessionType.LONG_BREAK -> _customDurations.value.longBreak
         }
     }
 
+    // Function to update custom durations (e.g., from a settings dialog)
+    // Durations are expected in seconds
+    fun updateCustomDurations(work: Int? = null, shortBreak: Int? = null, longBreak: Int? = null) {
+        val current = _customDurations.value
+        _customDurations.update {
+            it.copy(
+                work = work ?: current.work,
+                shortBreak = shortBreak ?: current.shortBreak,
+                longBreak = longBreak ?: current.longBreak
+            )
+        }
+        // If the current session is not running, update its timer to the new duration
+        if (!_isRunning.value) {
+            _timeRemainingSeconds.value = getDurationForSessionType(_currentSessionType.value)
+        }
+    }
+
+
     override fun onCleared() {
         super.onCleared()
-        countDownTimer?.cancel() // Ensure timer is cancelled when ViewModel is cleared
+        countDownTimer?.cancel()
     }
 }
 
+
 // Factory is needed because StreakRepository is a dependency
 class PomodoroViewModelFactory(
-    private val streakRepository: StreakRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PomodoroViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return PomodoroViewModel(streakRepository) as T
+            return PomodoroViewModel() as T
         }
         throw IllegalArgumentException("Unknown ViewModel class for Pomodoro")
     }

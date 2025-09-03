@@ -12,8 +12,11 @@ val Pink40 = Color(0xFF7D5260)
 
 // Custom Colors
 val WhiteBackground = Color.White
-val CardBackground = Color.White // For light theme
-val CardBackgroundDark = Color(0xFF2C2C2E) // Example for dark theme
+val CardBackgroundDark = Color(0xFF2C2C2C) // Softer dark grey
+val CardBackgroundLight = Color(0xFFF6F2FF) // Very light lavender
+
+//val CardBackground = Color.White // For light theme
+//val CardBackgroundDark = Color(0xFF2C2C2E) // Example for dark theme
 
 //val HighPriorityColor = Color(0xFFFFCDD2) // Light Red
 //val MediumPriorityColor = Color(0xFFFFF9C4) // Light Yellow
@@ -28,6 +31,18 @@ val LowPriorityIndicator = Color(0xFF66BB6A) // Deeper green
 val HighPriorityFont = Color(0xFFC62828) // Dark red
 val MediumPriorityFont = Color(0xFFB28704) // Dark golden amber
 val LowPriorityFont = Color(0xFF2E7D32) // Dark green
+
+
+val HighPriorityFont1 = Color(0xFF9B4DFF) // Vibrant purple for strong emphasis
+val MediumPriorityFont1 = Color(0xFFB07CFF) // Softer, lighter purple
+val LowPriorityFont1 = Color(0xFFD0B3FF) // Very light lavender for subtle emphasis
+
+
+
+// Priority colors for font (Purple Theme)
+val HighPriorityFont2 = Color(0xFF8E24AA)   // Deep Royal Purple
+val MediumPriorityFont2 = Color(0xFFBA68C8) // Softer Lavender Purple
+val LowPriorityFont2 = Color(0xFFD1C4E9)    // Very Light Purple (almost pastel)
 
 
 val HighPriorityColor = Color(0xFFFF8A80) // Pastel Red
