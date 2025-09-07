@@ -30,6 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip // Explicit M3 FilterChip import
 import androidx.compose.material3.FilterChipDefaults // Explicit M3 FilterChipDefaults import
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -72,6 +73,7 @@ import androidx.compose.material3.TextButton // Already there
 import androidx.compose.ui.unit.dp
 import androidx.room.Update
 import com.example.projectalpha.viewmodel.HabitFilterType // Import the enum
+import java.time.LocalDate
 
 
 // Extension function for toggling items in a MutableList
@@ -266,11 +268,11 @@ fun HabitItemCard(
     onDelete: () -> Unit
 ) {
     val cardElevation by animateDpAsState(
-        targetValue = if (habit.isCompletedForToday) 2.dp else 6.dp,
+        targetValue =if (habit.isCompletedForToday) 2.dp else 6.dp,
         label = "cardElevation"
         // Removed .value as 'by' delegate handles it
     )
-    val backgroundColor = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+    val backgroundColor = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
     var showActions by rememberSaveable { mutableStateOf(false) }
 
     Card(
@@ -285,7 +287,7 @@ fun HabitItemCard(
                     }
                 )
             },
-        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        //elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
@@ -314,7 +316,7 @@ fun HabitItemCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val todayShortName = java.time.LocalDate.now().dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).uppercase()
+                        val todayShortName = LocalDate.now().dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).uppercase()
                         habit.daysOfWeek.map { it.take(3).uppercase() }.forEach { dayAbbreviation ->
                             val isToday = dayAbbreviation.equals(todayShortName, ignoreCase = true)
                             Text(
@@ -338,7 +340,7 @@ fun HabitItemCard(
                         Icon(
                             painterResource(id = R.drawable.firefill), // Use your project's R
                             contentDescription = "Streak",
-                            tint = if (habit.isCompletedForToday && habit.streakCount > 0) MaterialTheme.colorScheme.primary else Color(0xFFE65100),
+                            tint = Color(0xFFE65100),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(4.dp))
@@ -353,7 +355,10 @@ fun HabitItemCard(
             }
 
             AnimatedVisibility(visible = showActions) {
-                Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -587,12 +592,14 @@ fun DayChip(
             null
         },
         shape = CircleShape,
-//        border = FilterChipDefaults.filterChipBorder(
-//            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = if (isSelected) 0f else 0.5f),
-//            selectedBorderColor = MaterialTheme.colorScheme.primary,
-//            borderWidth = 1.dp,
-//            selectedBorderWidth = 1.5.dp
-//        ),
+        border = FilterChipDefaults.filterChipBorder(
+            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = if (isSelected) 0f else 0.5f),
+            selectedBorderColor = MaterialTheme.colorScheme.primary,
+            borderWidth = 1.dp,
+            selectedBorderWidth = 1.5.dp,
+            enabled = TODO(),
+            selected = TODO()
+        ),
         colors = FilterChipDefaults.filterChipColors(
             containerColor = Color.Transparent, // More subtle unselected chip
             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
