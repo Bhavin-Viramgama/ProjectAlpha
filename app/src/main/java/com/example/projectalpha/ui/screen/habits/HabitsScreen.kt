@@ -592,14 +592,15 @@ fun DayChip(
             null
         },
         shape = CircleShape,
-        border = FilterChipDefaults.filterChipBorder(
-            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = if (isSelected) 0f else 0.5f),
-            selectedBorderColor = MaterialTheme.colorScheme.primary,
-            borderWidth = 1.dp,
-            selectedBorderWidth = 1.5.dp,
-            enabled = TODO(),
-            selected = TODO()
-        ),
+        //this was the problem behind crashes while clicking on the add habit button.
+//        border = FilterChipDefaults.filterChipBorder(
+//            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = if (isSelected) 0f else 0.5f),
+//            selectedBorderColor = MaterialTheme.colorScheme.primary,
+//            borderWidth = 1.dp,
+//            selectedBorderWidth = 1.5.dp,
+//            enabled = TODO(),
+//            selected = TODO()
+//        ),
         colors = FilterChipDefaults.filterChipColors(
             containerColor = Color.Transparent, // More subtle unselected chip
             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
