@@ -76,7 +76,11 @@ fun ProjectAlphaApp() {
         factory = PomodoroViewModelFactory()
     )
     val habitsViewModel: HabitsViewModel = viewModel(
-        factory = HabitsViewModelFactory(application.habitRepository)
+        factory = HabitsViewModelFactory(
+            application.habitRepository,
+            application.streakRepository,
+            application // Pass Application instance
+        )
     )
     // Assuming you have UserRepository and ProfileViewModelFactory defined
     // For now, let's placeholder it or create a simple one if not ready

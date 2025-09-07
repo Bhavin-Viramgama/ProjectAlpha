@@ -27,7 +27,7 @@ import java.util.Locale
 
 @Database(
     entities = [TaskEntity::class, HabitEntity::class, StreakEntity::class, UserEntity::class],
-    version = 2, // Keep your current version
+    version = 3, // Keep your current version
     exportSchema = false // Set to true if you plan to inspect schemas or add migrations later
 )
 @TypeConverters(Converters::class) // Ensure your Converters class is correctly implemented
@@ -143,6 +143,41 @@ abstract class AppDatabase : RoomDatabase() {
             )
             Log.d("AppDatabaseCallback", "Sample tasks inserted.")
 
+            val todayName = today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
+            val dayAfterTomorrowName = today.plusDays(2).dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
+
+            habitDao.insertHabit(
+                HabitEntity(
+                    name = "Morning Meditation",
+                    daysOfWeek = listOf(todayName, "SATURDAY", "SUNDAY"),
+                    streakCount = 2,
+                    isCompletedForToday = false,
+                    lastCompletedDate = today.minusDays(1) // Assuming it was completed yesterday
+                )
+            )
+            habitDao.insertHabit(
+                HabitEntity(
+                    name = "Read for 30 Mins",
+                    daysOfWeek = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"),
+                    streakCount = 5,
+                    isCompletedForToday = false,
+                    lastCompletedDate = null
+                )
+            )
+            habitDao.insertHabit(
+                HabitEntity(
+                    name = "Weekend Jog",
+                    daysOfWeek = listOf("SATURDAY", "SUNDAY"),
+                    isCompletedForToday = false, // Reset correctly
+                    lastCompletedDate = null
+                )
+            )
+            habitDao.insertHabit(
+                HabitEntity(
+                    name = "Hydrate Well (Scheduled for today and day after tomorrow)",
+                    daysOfWeek = listOf(todayName, dayAfterTomorrowName) // Ensure at least one habit is for "today"
+                )
+            )
             Log.d("AppDatabaseCallback", "Sample habits inserted.")
             Log.d("AppDatabaseCallback", "Data population finished.")
         }
