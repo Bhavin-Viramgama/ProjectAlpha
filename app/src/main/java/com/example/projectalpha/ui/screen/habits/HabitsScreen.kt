@@ -24,6 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip // Explicit M3 FilterChip import
@@ -66,6 +67,12 @@ import com.example.projectalpha.viewmodel.HabitsViewModel
 import java.time.DayOfWeek as JavaDayOfWeek // Alias
 import java.time.format.TextStyle
 import java.util.Locale
+import androidx.compose.material3.OutlinedButton // For toggle buttons
+import androidx.compose.material3.TextButton // Already there
+import androidx.compose.ui.unit.dp
+import androidx.room.Update
+import com.example.projectalpha.viewmodel.HabitFilterType // Import the enum
+
 
 // Extension function for toggling items in a MutableList
 fun <T> MutableList<T>.toggle(item: T) {
@@ -79,7 +86,10 @@ fun <T> MutableList<T>.toggle(item: T) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HabitsScreen(habitsViewModel: HabitsViewModel) {
-    val habitsToDisplay by habitsViewModel.todaysHabits.collectAsState()
+    // Observe the new habitsToDisplay and selectedFilterType
+    val habitsToDisplay by habitsViewModel.habitsToDisplay.collectAsState()
+    val currentFilterType by habitsViewModel.selectedFilterType.collectAsState()
+
     var showAddHabitDialog by rememberSaveable { mutableStateOf(false) }
     var habitToEdit by rememberSaveable { mutableStateOf<HabitEntity?>(null) } // Simplified key for rememberSaveable
     var habitToDelete by remember { mutableStateOf<HabitEntity?>(null) }
@@ -106,43 +116,81 @@ fun HabitsScreen(habitsViewModel: HabitsViewModel) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(paddingValues) // Apply Scaffold padding
+            // Screen-specific padding will be applied to child Column
         ) {
-            Text(
-                "Today's Habits",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp, top = 8.dp)
-            )
-
-            if (habitsToDisplay.isEmpty()) {
-                Box(
+            // Filter Toggle Buttons Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally) // Center the buttons
                 ) {
-                    Text(
-                        "No habits scheduled for today. Add one!",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    HabitFilterButton(
+                        text = "Today",
+                        isSelected = currentFilterType == HabitFilterType.TODAY,
+                        onClick = { habitsViewModel.setFilterType(HabitFilterType.TODAY) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    HabitFilterButton(
+                        text = "All Habits",
+                        isSelected = currentFilterType == HabitFilterType.ALL,
+                        onClick = { habitsViewModel.setFilterType(HabitFilterType.ALL) },
+                        modifier = Modifier.weight(1f)
                     )
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(items = habitsToDisplay, key = { habit -> habit.id }) { habit ->
-                        HabitItemCard(
-                            habit = habit,
-                            onToggleComplete = { habitsViewModel.toggleHabitCompletion(habit) },
-                            onEdit = {
-                                habitToEdit = habit
-                                showAddHabitDialog = true
-                            },
-                            onDelete = { habitToDelete = habit }
+            }
+
+            // Title and List Column (with its own padding)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp) // Padding for list content below filter
+            ) {
+                Text(
+                    text = if (currentFilterType == HabitFilterType.TODAY) "Today's Habits" else "All Habits",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(bottom = 16.dp, top = 8.dp)
+                )
+
+                if (habitsToDisplay.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (currentFilterType == HabitFilterType.TODAY) "No habits scheduled for today." else "No habits found. Add one!",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp)
                         )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp) // Padding at the bottom of the list
+                    ) {
+                        items(items = habitsToDisplay, key = { habit -> habit.id }) { habit ->
+                            HabitItemCard(
+                                habit = habit,
+                                onToggleComplete = { habitsViewModel.toggleHabitCompletion(habit) },
+                                onEdit = {
+                                    habitToEdit = habit
+                                    showAddHabitDialog = true
+                                },
+                                onDelete = { habitToDelete = habit }
+                            )
+                        }
                     }
                 }
             }
@@ -187,6 +235,28 @@ fun HabitsScreen(habitsViewModel: HabitsViewModel) {
     }
 }
 
+@Composable
+fun HabitFilterButton(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(40.dp), // Consistent height for buttons
+        shape = RoundedCornerShape(8.dp), // More modern rounded corners
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
+        ),
+        border = ButtonDefaults.outlinedButtonBorder.takeIf { !isSelected } // No border if selected and filled
+    ) {
+        Text(text, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HabitItemCard(
@@ -209,8 +279,10 @@ fun HabitItemCard(
             .clip(RoundedCornerShape(12.dp)) // Clipping the card itself
             .pointerInput(Unit) { // Apply pointerInput to the Card
                 detectTapGestures(
-                    onLongPress = { showActions = true },
-                    onTap = { if (!showActions) onToggleComplete() } // Toggle only if actions aren't shown
+                    //onLongPress = { showActions = true },
+                    onTap = {
+                            showActions = !showActions
+                    }
                 )
             },
         elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
@@ -285,7 +357,10 @@ fun HabitItemCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp).copy(alpha = 0.5f))
+                        .background(
+                            MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                                .copy(alpha = 0.5f)
+                        )
                         .padding(horizontal = 8.dp),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
@@ -347,12 +422,41 @@ fun AddEditHabitDialog(
     val allDays = remember { JavaDayOfWeek.entries.map { it.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase() } }
     val selectedDays = remember { mutableStateListOf<String>() }
 
-    LaunchedEffect(habitToEdit) { // Re-initialize selectedDays when habitToEdit changes
+    // State for the "Select All" checkbox
+    var allDaysSelected by remember { mutableStateOf(false) }
+
+    // Effect to initialize selectedDays and allDaysSelected checkbox
+    LaunchedEffect(habitToEdit) {
         selectedDays.clear()
         if (habitToEdit != null) {
             selectedDays.addAll(habitToEdit.daysOfWeek.map { it.uppercase(Locale.ENGLISH) })
+            allDaysSelected = selectedDays.size == allDays.size // Check if all days were initially selected
+        } else {
+            allDaysSelected = false // For new habit, default to not all selected
         }
     }
+
+    // Effect to sync selectedDays list with allDaysSelected checkbox
+    LaunchedEffect(allDaysSelected) {
+        if (allDaysSelected) {
+            selectedDays.clear()
+            selectedDays.addAll(allDays)
+        } else {
+            // If unchecking "Select All", only clear if all were previously selected due to this checkbox.
+            // This prevents unchecking "Select All" from clearing manually selected individual days
+            // unless the user intends to deselect all. A bit nuanced, could be simpler if desired.
+            // Simpler: if (!allDaysSelected) selectedDays.clear() - but this might be too aggressive.
+            // Current: If allDaysSelected is false, it means either it was just unchecked OR
+            // not all days were selected individually. We don't automatically clear here,
+            // individual toggles will manage the list. The checkbox serves as a bulk add/check.
+        }
+    }
+
+    // Effect to update "Select All" checkbox if all days are selected/deselected manually
+    LaunchedEffect(selectedDays.toList()) { // Observe changes to the list content
+        allDaysSelected = selectedDays.size == allDays.size && selectedDays.containsAll(allDays)
+    }
+
 
     var nameError by remember { mutableStateOf<String?>(null) }
     var dayError by remember { mutableStateOf<String?>(null) }
@@ -387,10 +491,35 @@ fun AddEditHabitDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                nameError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(start = 4.dp)) }
+                nameError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp)) }
 
-                Text("Repeat on:", style = MaterialTheme.typography.titleMedium, modifier = Modifier.align(Alignment.Start))
-
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Repeat on:", style = MaterialTheme.typography.titleMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = allDaysSelected,
+                            onCheckedChange = { checked ->
+                                allDaysSelected = checked
+                                if (checked) {
+                                    selectedDays.clear()
+                                    selectedDays.addAll(allDays)
+                                } else {
+                                    selectedDays.clear() // When "Select All" is unchecked, clear all days
+                                }
+                                dayError = if (selectedDays.isEmpty() && checked) "Select at least one day" // Should not happen if allDaysSelected true adds all
+                                else if (selectedDays.isEmpty() && !checked) "Select at least one day"
+                                else null
+                            }
+                        )
+                        Text("All Days", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
                 FlowRow( // Use FlowRow for better chip layout
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -402,12 +531,17 @@ fun AddEditHabitDialog(
                             isSelected = selectedDays.contains(day),
                             onToggle = {
                                 selectedDays.toggle(day) // Uses the extension function
+                                // Update allDaysSelected checkbox based on individual selections
+                                allDaysSelected = selectedDays.size == allDays.size && selectedDays.containsAll(allDays)
+
                                 dayError = if (selectedDays.isEmpty()) "Select at least one day" else null
                             }
                         )
                     }
                 }
-                dayError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(start = 4.dp)) }
+                dayError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp)) }
 
                 Spacer(Modifier.height(8.dp))
 
