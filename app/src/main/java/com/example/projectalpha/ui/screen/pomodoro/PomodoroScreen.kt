@@ -3,6 +3,7 @@ package com.example.projectalpha.ui.screen.pomodoro
 import android.annotation.SuppressLint
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -102,7 +103,9 @@ fun PomodoroScreen(pomodoroViewModel: PomodoroViewModel) {
                 timeFormatted = timeFormatted,
                 strokeWidth = 16.dp,
                 timerColor = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                onClickEdit = {pomodoroViewModel.startPauseTimer()
+                    showEditDialog = true}
             )
 
             ControlButtons(
@@ -124,7 +127,8 @@ fun CircularTimerView(
     strokeWidth: Dp = 12.dp,
     timerColor: Color = MaterialTheme.colorScheme.primary,
     trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-    backgroundColor: Color = MaterialTheme.colorScheme.surface
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+    onClickEdit: () -> Unit
 ) {
     val stroke = with(LocalDensity.current) { Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round) }
 
@@ -156,7 +160,8 @@ fun CircularTimerView(
         Text(
             text = timeFormatted,
             style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Medium),
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.clickable(onClick = onClickEdit)
         )
     }
 }

@@ -108,10 +108,9 @@ fun HabitsScreen(habitsViewModel: HabitsViewModel) {
                 onClick = {
                     habitToEdit = null
                     showAddHabitDialog = true
-                },
-                containerColor = MaterialTheme.colorScheme.primary
+                }
             ) {
-                Icon(Icons.Filled.Add, "Add Habit", tint = MaterialTheme.colorScheme.onPrimary)
+                Icon(Icons.Filled.Add, "Add Habit")
             }
         }
     ) { paddingValues ->
