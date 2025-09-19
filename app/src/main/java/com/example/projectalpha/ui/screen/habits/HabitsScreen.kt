@@ -192,6 +192,9 @@ fun HabitsScreen(habitsViewModel: HabitsViewModel) {
                                 onDelete = { habitToDelete = habit }
                             )
                         }
+                        item {
+                            Spacer(modifier = Modifier.height(80.dp)) // to prevent add button hides edit and delete task button
+                        }
                     }
                 }
             }

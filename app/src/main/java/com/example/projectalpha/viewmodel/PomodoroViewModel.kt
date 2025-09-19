@@ -3,7 +3,6 @@ package com.example.projectalpha.viewmodel
 import android.os.CountDownTimer // Using classic Android CountDownTimer for simplicity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.projectalpha.data.repository.StreakRepository // To update streak on session completion
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,9 +44,16 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
         _timeRemainingSeconds.value = getDurationForSessionType(_currentSessionType.value)
     }
 
+
+    fun pauseTimer() {
+        if (_isRunning.value) {
+            _pauseTimer()
+        }
+    }
+
     fun startPauseTimer() {
         if (_isRunning.value) {
-            pauseTimer()
+            _pauseTimer()
         } else {
             startTimer()
         }
@@ -68,13 +74,13 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
         }.start()
     }
 
-    private fun pauseTimer() {
+    private fun _pauseTimer() {
         _isRunning.value = false
         countDownTimer?.cancel()
     }
 
     fun resetTimer() {
-        pauseTimer()
+        _pauseTimer()
         _timeRemainingSeconds.value = getDurationForSessionType(_currentSessionType.value)
     }
 
@@ -96,7 +102,7 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
     }
 
     fun skipSession() {
-        pauseTimer()
+        _pauseTimer()
         // Reset work sessions count if skipping a break to ensure next long break is correct
         if (_currentSessionType.value != PomodoroSessionType.WORK) {
             // If skipping a break, and it was supposed to be a long break,

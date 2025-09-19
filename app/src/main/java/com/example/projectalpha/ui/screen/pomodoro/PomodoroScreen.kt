@@ -104,7 +104,7 @@ fun PomodoroScreen(pomodoroViewModel: PomodoroViewModel) {
                 strokeWidth = 16.dp,
                 timerColor = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                onClickEdit = {pomodoroViewModel.startPauseTimer()
+                onClickEdit = {pomodoroViewModel.pauseTimer()
                     showEditDialog = true}
             )
 

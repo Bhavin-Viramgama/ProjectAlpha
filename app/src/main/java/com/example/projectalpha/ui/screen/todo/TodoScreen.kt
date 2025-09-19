@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.room.util.TableInfo
 import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.ui.theme.AppTypography
 import com.example.projectalpha.ui.theme.HighPriorityFont
@@ -107,21 +108,31 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
             ) {
-                Button(onClick = {
+                Button(
+                    onClick = {
                     toDoViewModel.selectDate(selectedDate.minusDays(1))
                     //toDoViewModel.loadTasksForDate12(selectedDate)
-                }) {
-                    Text("<")
+                },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )) {
+                    Text(text = "<")
                 }
                 Text(
                     selectedDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
                     style = AppTypography.titleLarge
                 )
-                Button(onClick = {
+                Button(
+                    onClick = {
                     toDoViewModel.selectDate(selectedDate.plusDays(1))
                     //toDoViewModel.loadTasksForDate12(selectedDate)
-                }) {
-                    Text(">")
+                },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )) {
+                    Text(text = ">")
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -177,6 +188,9 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
                                 }
                             )
                         }
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp)) // to prevent add button hides edit and delete task button
                     }
                 }
             }
