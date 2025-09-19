@@ -47,13 +47,14 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
 
     fun pauseTimer() {
         if (_isRunning.value) {
-            _pauseTimer()
+            _isRunning.value = false
+            countDownTimer?.cancel()
         }
     }
 
     fun startPauseTimer() {
         if (_isRunning.value) {
-            _pauseTimer()
+            pauseTimer()
         } else {
             startTimer()
         }
@@ -74,13 +75,9 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
         }.start()
     }
 
-    private fun _pauseTimer() {
-        _isRunning.value = false
-        countDownTimer?.cancel()
-    }
 
     fun resetTimer() {
-        _pauseTimer()
+        pauseTimer()
         _timeRemainingSeconds.value = getDurationForSessionType(_currentSessionType.value)
     }
 
@@ -102,7 +99,7 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
     }
 
     fun skipSession() {
-        _pauseTimer()
+        pauseTimer()
         // Reset work sessions count if skipping a break to ensure next long break is correct
         if (_currentSessionType.value != PomodoroSessionType.WORK) {
             // If skipping a break, and it was supposed to be a long break,
@@ -138,6 +135,21 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
             _timeRemainingSeconds.value = getDurationForSessionType(_currentSessionType.value)
         }
     }
+
+    /**
+     * Directly sets the time remaining for the current session.
+     * This is typically used when the user manually picks a time.
+     * Only applies if the timer is not currently running.
+     */
+    fun setCurrentSessionTime(minutes: Int, seconds: Int) {
+        if (!_isRunning.value) {
+            val totalSeconds = (minutes * 60) + seconds
+            // Cap the time to a reasonable maximum if needed, e.g., 99 minutes 59 seconds
+            val maxAllowedSeconds = 99 * 60 + 59
+            _timeRemainingSeconds.value = totalSeconds.coerceAtMost(maxAllowedSeconds).coerceAtLeast(0)
+        }
+    }
+
 
 
     override fun onCleared() {
