@@ -1,12 +1,16 @@
 package com.example.projectalpha.viewmodel
 
 import android.os.CountDownTimer // Using classic Android CountDownTimer for simplicity
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.projectalpha.viewmodel.DEFAULT_SHORT_BREAK_DURATION_SECONDS
+import com.example.projectalpha.viewmodel.DEFAULT_WORK_DURATION_SECONDS
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.Int
 
 // Default Pomodoro times in seconds - these will be our initial values
 const val DEFAULT_WORK_DURATION_SECONDS = 25 * 60
@@ -30,6 +34,11 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
     private val _timeRemainingSeconds = MutableStateFlow(_customDurations.value.work)
     val timeRemainingSeconds: StateFlow<Int> = _timeRemainingSeconds.asStateFlow()
 
+    // Holds the duration the *current* countdown is based on (either default or manually set)
+    private val _effectiveMaxDurationSeconds = MutableStateFlow(0) // Will be set in init
+    val effectiveMaxDurationSeconds: StateFlow<Int> = _effectiveMaxDurationSeconds.asStateFlow()
+
+
     private val _isRunning = MutableStateFlow(false)
     val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
 
@@ -39,9 +48,16 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
     private var workSessionsCompleted = 0
     private var countDownTimer: CountDownTimer? = null
 
+    // Stores the time if manually set by the scrollable picker for the *current session instance*
+    private var _lastManuallySetTimeForCurrentSessionInstance: Int? = null
+
+
     init {
         // Initialize time remaining based on the current (default) session type and custom durations
-        _timeRemainingSeconds.value = getDurationForSessionType(_currentSessionType.value)
+        val initialDuration = getDurationForSessionTypeFromDefaults(_currentSessionType.value)
+        _timeRemainingSeconds.value = initialDuration
+        _effectiveMaxDurationSeconds.value = initialDuration
+
     }
 
 
@@ -49,6 +65,7 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
         if (_isRunning.value) {
             _isRunning.value = false
             countDownTimer?.cancel()
+            Log.d("PomodoroVM", "Timer Paused. Remaining: ${_timeRemainingSeconds.value}")
         }
     }
 
@@ -61,15 +78,29 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
     }
 
     private fun startTimer() {
-        if (_timeRemainingSeconds.value <= 0) return // Don't start if time is zero
+        // If time is zero, reset to what it should be for the current session instance
+        if (_timeRemainingSeconds.value <= 0) {
+            val resetTime = _lastManuallySetTimeForCurrentSessionInstance ?: getDurationForSessionTypeFromDefaults(_currentSessionType.value)
+            if (resetTime <= 0) {
+                Log.d("PomodoroVM", "Attempted to start with zero or negative time. Effective duration: $resetTime")
+                // Potentially advance to next session if current is truly zero duration by default
+                // For now, just prevent starting.
+                return
+            }
+            _timeRemainingSeconds.value = resetTime
+            _effectiveMaxDurationSeconds.value = resetTime
+        }
 
         _isRunning.value = true
+        Log.d("PomodoroVM", "Timer Started. Duration: ${_timeRemainingSeconds.value}, EffectiveMax: ${_effectiveMaxDurationSeconds.value}")
         countDownTimer = object : CountDownTimer(_timeRemainingSeconds.value * 1000L, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 _timeRemainingSeconds.value = (millisUntilFinished / 1000).toInt()
             }
 
             override fun onFinish() {
+                Log.d("PomodoroVM", "Timer Finished. Session: ${_currentSessionType.value}")
+                _timeRemainingSeconds.value = 0 // Ensure it hits zero on UI
                 handleSessionFinished()
             }
         }.start()
@@ -78,24 +109,32 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
 
     fun resetTimer() {
         pauseTimer()
-        _timeRemainingSeconds.value = getDurationForSessionType(_currentSessionType.value)
+        val resetTime = _lastManuallySetTimeForCurrentSessionInstance ?: getDurationForSessionTypeFromDefaults(_currentSessionType.value)
+        _timeRemainingSeconds.value = resetTime
+        _effectiveMaxDurationSeconds.value = resetTime
+        Log.d("PomodoroVM", "Timer Reset. To: $resetTime, Session: ${_currentSessionType.value}")
     }
 
     private fun handleSessionFinished() {
         _isRunning.value = false
-        // Streak logic removed
-        if (_currentSessionType.value == PomodoroSessionType.WORK) {
+        _lastManuallySetTimeForCurrentSessionInstance = null // Clear manual override for the *next* session
+
+        val previousSessionType = _currentSessionType.value
+        if (previousSessionType == PomodoroSessionType.WORK) {
             workSessionsCompleted++
-            if (workSessionsCompleted % 4 == 0 && workSessionsCompleted > 0) { // Long break after 4 work sessions
-                _currentSessionType.value = PomodoroSessionType.LONG_BREAK
+            _currentSessionType.value = if (workSessionsCompleted % 4 == 0 && workSessionsCompleted > 0) {
+                PomodoroSessionType.LONG_BREAK
             } else {
-                _currentSessionType.value = PomodoroSessionType.SHORT_BREAK
+                PomodoroSessionType.SHORT_BREAK
             }
-        } else { // Break finished, go back to work
+        } else {
             _currentSessionType.value = PomodoroSessionType.WORK
         }
-        _timeRemainingSeconds.value = getDurationForSessionType(_currentSessionType.value)
-        // Optionally auto-start next session or wait for user
+        val newDefaultDuration = getDurationForSessionTypeFromDefaults(_currentSessionType.value)
+        _timeRemainingSeconds.value = newDefaultDuration
+        _effectiveMaxDurationSeconds.value = newDefaultDuration
+        Log.d("PomodoroVM", "Session Handled. New Session: ${_currentSessionType.value}, Duration: $newDefaultDuration")
+
     }
 
     fun skipSession() {
@@ -108,10 +147,11 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
             // This logic can be refined based on exact desired skip behavior for long breaks.
         }
         handleSessionFinished()
+        Log.d("PomodoroVM", "Session Skipped. New Session: ${_currentSessionType.value}, Duration: ${_timeRemainingSeconds.value}")
     }
 
     // Public getter for UI to know max duration
-    fun getDurationForSessionType(type: PomodoroSessionType): Int {
+    fun getDurationForSessionTypeFromDefaults(type: PomodoroSessionType): Int {
         return when (type) {
             PomodoroSessionType.WORK -> _customDurations.value.work
             PomodoroSessionType.SHORT_BREAK -> _customDurations.value.shortBreak
@@ -122,19 +162,26 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
     // Function to update custom durations (e.g., from a settings dialog)
     // Durations are expected in seconds
     fun updateCustomDurations(work: Int? = null, shortBreak: Int? = null, longBreak: Int? = null) {
-        val current = _customDurations.value
+        val currentGlobalDefaults = _customDurations.value
         _customDurations.update {
             it.copy(
-                work = work ?: current.work,
-                shortBreak = shortBreak ?: current.shortBreak,
-                longBreak = longBreak ?: current.longBreak
+                work = work ?: currentGlobalDefaults.work,
+                shortBreak = shortBreak ?: currentGlobalDefaults.shortBreak,
+                longBreak = longBreak ?: currentGlobalDefaults.longBreak
             )
         }
-        // If the current session is not running, update its timer to the new duration
+        // When global defaults are updated, the current session (if not running) should reflect this new global default,
+        // and any prior manual override for this instance is voided.
+        _lastManuallySetTimeForCurrentSessionInstance = null
         if (!_isRunning.value) {
-            _timeRemainingSeconds.value = getDurationForSessionType(_currentSessionType.value)
+            val newDefaultDuration = getDurationForSessionTypeFromDefaults(_currentSessionType.value)
+            _timeRemainingSeconds.value = newDefaultDuration
+            _effectiveMaxDurationSeconds.value = newDefaultDuration
         }
+        Log.d("PomodoroVM", "Custom Durations Updated. Work: ${_customDurations.value.work}")
     }
+
+
 
     /**
      * Directly sets the time remaining for the current session.
@@ -146,7 +193,12 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
             val totalSeconds = (minutes * 60) + seconds
             // Cap the time to a reasonable maximum if needed, e.g., 99 minutes 59 seconds
             val maxAllowedSeconds = 99 * 60 + 59
-            _timeRemainingSeconds.value = totalSeconds.coerceAtMost(maxAllowedSeconds).coerceAtLeast(0)
+            val newTime = totalSeconds.coerceAtMost(maxAllowedSeconds).coerceAtLeast(0)
+
+            _timeRemainingSeconds.value = newTime
+            _effectiveMaxDurationSeconds.value = newTime // This is the new base for the progress bar
+            _lastManuallySetTimeForCurrentSessionInstance = newTime // Store this as the manual override
+            Log.d("PomodoroVM", "Manual Time Set: $newTime for session ${_currentSessionType.value}")
         }
     }
 
