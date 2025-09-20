@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 // Sealed class for defining navigation routes
 sealed class Screen(val route: String, val title: String? = null, val icon: ImageVector? = null) {
-    object Home : Screen("home", "Home", Icons.Filled.Home)
+    //object Home : Screen("home", "Home", Icons.Filled.Home)
     object ToDoList : Screen("todo", "To-Do", Icons.Filled.CheckCircle)
     object Pomodoro : Screen("pomodoro", "Pomodoro", Icons.Filled.Notifications)
     object Habits : Screen("habits", "Habits", Icons.Filled.Face)
@@ -22,7 +22,7 @@ sealed class Screen(val route: String, val title: String? = null, val icon: Imag
 
 // List of bottom navigation items
 val bottomNavItems = listOf(
-    Screen.Home,
+    //Screen.Home,
     Screen.ToDoList,
     Screen.Pomodoro,
     Screen.Habits

@@ -101,7 +101,7 @@ fun ProjectAlphaApp() {
 
     val currentScreenTitle = bottomNavItems.find { it.route == currentDestination?.route }?.title
         ?: Screen.Profile.title.takeIf { currentDestination?.route == Screen.Profile.route }
-        ?: Screen.Home.title ?: "Project Alpha" // Default title
+        ?: "Project Alpha" // Default title
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
@@ -130,9 +130,9 @@ fun ProjectAlphaApp() {
                             modifier = Modifier.padding(start = 4.dp, end = 8.dp)
                         )
                     }
-                    IconButton(onClick = { navController.navigate(Screen.Profile.route) }) {
-                        Icon(Icons.Filled.AccountCircle, "Profile")
-                    }
+//                    IconButton(onClick = { navController.navigate(Screen.Profile.route) }) {
+//                        Icon(Icons.Filled.AccountCircle, "Profile")
+//                    }
                 },
                 scrollBehavior = scrollBehavior
             )
@@ -149,7 +149,7 @@ fun ProjectAlphaApp() {
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize(),
-            homeViewModel = homeViewModel,
+            //homeViewModel = homeViewModel,
             toDoViewModel = toDoViewModel,
             pomodoroViewModel = pomodoroViewModel,
             habitsViewModel = habitsViewModel,
@@ -205,23 +205,28 @@ fun AppBottomNavigationBar(navController: NavHostController, items: List<Screen>
 fun AppNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    homeViewModel: HomeViewModel,
-    toDoViewModel: ToDoViewModel,       // Add ToDoViewModel as a parameter
-    pomodoroViewModel: PomodoroViewModel, // Add PomodoroViewModel
-    habitsViewModel: HabitsViewModel,   // Add HabitsViewModel
-    profileViewModel: ProfileViewModel  // Add ProfileViewModel
+    //homeViewModel: HomeViewModel,
+    toDoViewModel: ToDoViewModel,
+    pomodoroViewModel: PomodoroViewModel,
+    habitsViewModel: HabitsViewModel,
+    profileViewModel: ProfileViewModel
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route,
+        startDestination = Screen.Pomodoro.route,
         modifier = modifier
     ) {
+        /*
+        //This is the old component for Home Screen
         composable(Screen.Home.route) {
             HomeScreen(
                 navController = navController, //for navigation to todoScreen on press see all button
                 homeViewModel = homeViewModel
             )
         }
+
+         */
+
         composable(Screen.ToDoList.route) {
             ToDoScreen(toDoViewModel = toDoViewModel) // Pass the ToDoViewModel
         }

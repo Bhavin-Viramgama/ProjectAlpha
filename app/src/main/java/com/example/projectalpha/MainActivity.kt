@@ -217,26 +217,26 @@ fun TaskItem(
 
 
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true)
-@Composable
-fun Prev(){
-    ProjectAlphaTheme {
-            Scaffold(
-            ) { innerPadding ->
-                Surface (Modifier.padding(innerPadding)){
-                    Column(
-                        modifier = Modifier.fillMaxSize().padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        TaskCardPreview()
-                        TaskCardPreview()
-                    }
-
-                }
-
-            }
-    }
-}
+//@OptIn(ExperimentalMaterial3Api::class)
+//@Preview(showBackground = true)
+//@Composable
+//fun Prev(){
+//    ProjectAlphaTheme {
+//            Scaffold(
+//            ) { innerPadding ->
+//                Surface (Modifier.padding(innerPadding)){
+//                    Column(
+//                        modifier = Modifier.fillMaxSize().padding(10.dp),
+//                        verticalArrangement = Arrangement.spacedBy(8.dp)
+//                    ) {
+//                        TaskCardPreview()
+//                        TaskCardPreview()
+//                    }
+//
+//                }
+//
+//            }
+//    }
+//}
 
 
