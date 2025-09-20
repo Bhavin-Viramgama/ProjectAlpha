@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -31,19 +32,24 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavHostController
 import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.ui.navigation.Screen
 import com.example.projectalpha.ui.theme.AppTypography
+import com.example.projectalpha.ui.theme.HighPriorityFont
 import com.example.projectalpha.ui.theme.HighPriorityFont1
+import com.example.projectalpha.ui.theme.LowPriorityFont
 import com.example.projectalpha.ui.theme.LowPriorityFont1
+import com.example.projectalpha.ui.theme.MediumPriorityFont
 import com.example.projectalpha.ui.theme.MediumPriorityFont1
 import com.example.projectalpha.viewmodel.ToDoViewModel
 import kotlinx.coroutines.delay
@@ -103,7 +109,7 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel,navController: NavHostController) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 8.dp).clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = .6f))
             ) {
                 Button(
                     onClick = {
@@ -114,7 +120,9 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel,navController: NavHostController) {
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )) {
-                    Text(text = "<")
+                    Text(text = "<",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold)
                 }
                 Text(
                     selectedDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
@@ -129,7 +137,9 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel,navController: NavHostController) {
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )) {
-                    Text(text = ">")
+                    Text(text = ">",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold)
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -254,9 +264,9 @@ fun TaskItem(
         if(isExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
     )
     val priorityFontColor = when (task.priority.lowercase()) {
-        "high" -> HighPriorityFont1 // Solid color for indicator
-        "medium" -> MediumPriorityFont1
-        "low" -> LowPriorityFont1
+        "high" -> HighPriorityFont// Solid color for indicator
+        "medium" -> MediumPriorityFont
+        "low" -> LowPriorityFont
         else -> Color.Transparent
     }
     Card(
@@ -264,7 +274,7 @@ fun TaskItem(
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 2.dp)
             .clickable { isExpanded = !isExpanded },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = if (task.isCompleted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = .20f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = .38f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
 
     ) {
@@ -308,7 +318,7 @@ fun TaskItem(
                     modifier = Modifier.padding(vertical = 4.dp),
                     style = AppTypography.titleMedium.copy(
                         textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-                        color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.onSurface
+                        color = if (task.isCompleted) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
                     ),
                     fontWeight = FontWeight.Bold
                 )
@@ -317,7 +327,7 @@ fun TaskItem(
                         text = "Deadline: ${it.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT))}",
                         modifier = Modifier.padding(top = 0.dp),
                         style = AppTypography.bodySmall.copy(
-                            color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.tertiary
+                            color = if (task.isCompleted) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.tertiary
                         )
                     )
                 }
@@ -326,7 +336,7 @@ fun TaskItem(
                         text = it,
                         style = AppTypography.bodySmall.copy(
                             textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
-                            color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (task.isCompleted) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant
                         ),
                         modifier = Modifier
                             .padding(top = 4.dp)

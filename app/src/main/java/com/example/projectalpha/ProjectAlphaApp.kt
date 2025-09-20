@@ -175,7 +175,7 @@ fun ProjectAlphaApp() {
                             modifier = Modifier
                                 .padding(2.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(Color(0xFF212121))
+                                .background(MaterialTheme.colorScheme.primaryContainer)
                                 .padding(4.dp)
                         ) {
                             Icon(
@@ -187,7 +187,7 @@ fun ProjectAlphaApp() {
                             Text(
                                 text = streakPointsDisplay.toString(),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.padding(start = 4.dp, end = 8.dp)
                             )
                         }
@@ -246,17 +246,17 @@ fun AppBottomNavigationBar(navController: NavHostController, items: List<Screen>
                 },
                 icon = {
                     screen.icon?.let { icon ->
-                        Icon(icon, contentDescription = screen.title, tint = if (selected) Color(0xFF9B4DFF) else Color.Gray)
+                        Icon(icon, contentDescription = screen.title, tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
                 label = { Text(screen.title ?: "") },
                 selected = selected,
                 colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = Color(0xFF9B4DFF).copy(alpha = 0.15f),
-                    selectedIconColor = Color(0xFF9B4DFF),
-                    unselectedIconColor = Color.Gray,
-                    selectedTextColor = Color(0xFF9B4DFF),
-                    unselectedTextColor = Color.Gray
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) // Or secondaryContainer
                 )
 
             )

@@ -151,25 +151,6 @@ fun AddEditTaskScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp), // Spacing between date and priority
                     verticalAlignment = Alignment.CenterVertically // Align items vertically
                 ) {
-                    OutlinedButton(
-                        onClick = { showTaskDatePickerDialog = true },
-                        modifier = Modifier
-                            .weight(1f) // Date takes more space
-                        //.padding(vertical = 10.dp, horizontal = 4.dp), // Padding was a bit much here
-                        ,shape = MaterialTheme.shapes.medium
-                    ) {
-                        Icon(
-                            Icons.Filled.DateRange,
-                            contentDescription = "Select Task Date",
-                            modifier = Modifier.size(ButtonDefaults.IconSize) // Standard icon size
-                        )
-                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text(
-                            "Date: ${taskDateForScreen.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))}",
-                            maxLines = 1, overflow = TextOverflow.Ellipsis // Prevent text wrapping
-                        )
-                    }
-
                     Box(modifier = Modifier.weight(1f)) { // Box for priority dropdown to control its width
                         ExposedDropdownMenuBox(
                             expanded = priorityExpanded,
@@ -203,6 +184,25 @@ fun AddEditTaskScreen(
                                 }
                             }
                         }
+                    }
+
+                    OutlinedButton(
+                        onClick = { showTaskDatePickerDialog = true },
+                        modifier = Modifier
+                            .weight(1f) // Date takes more space
+                        //.padding(vertical = 10.dp, horizontal = 4.dp), // Padding was a bit much here
+                        ,shape = MaterialTheme.shapes.medium
+                    ) {
+                        Icon(
+                            Icons.Filled.DateRange,
+                            contentDescription = "Select Task Date",
+                            modifier = Modifier.size(ButtonDefaults.IconSize) // Standard icon size
+                        )
+                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                        Text(
+                            "Date: ${taskDateForScreen.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))}",
+                            maxLines = 1, overflow = TextOverflow.Ellipsis // Prevent text wrapping
+                        )
                     }
                 }
 
@@ -241,6 +241,17 @@ fun AddEditTaskScreen(
                             shape = MaterialTheme.shapes.medium
                         )
 
+                        OutlinedButton(
+                            onClick = { showDeadlineTimePickerDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Icon(Icons.Filled.Lock, contentDescription = "Select Deadline Time", modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                            Text("Deadline Time: ${deadlineTimePart.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))}")
+                        }
+
+                        /*
                         // --- Re-add the "Set Specific Deadline" Checkbox ---
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -254,10 +265,11 @@ fun AddEditTaskScreen(
                         }
                         // --- End Re-added Checkbox ---
 
+
                         // Deadline Date and Time Pickers (only visible if hasDeadline is true *AND* advanced options are shown)
                         AnimatedVisibility(visible = hasDeadline && showAdvancedOptions) {
                             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                /* Deadline Date Picker
+                                //Deadline Date Picker
                                 OutlinedButton(
                                     onClick = { showDeadlineDatePickerDialog = true },
                                     modifier = Modifier.fillMaxWidth(),
@@ -267,7 +279,7 @@ fun AddEditTaskScreen(
                                     Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                                     Text("Deadline Date: ${deadlineDatePart.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))}")
                                 }
-                               */
+
                                 OutlinedButton(
                                     onClick = { showDeadlineTimePickerDialog = true },
                                     modifier = Modifier.fillMaxWidth(),
@@ -279,6 +291,8 @@ fun AddEditTaskScreen(
                                 }
                             }
                         }
+
+                         */
                         // Spacer for visual separation if needed before next section or button
                         // Spacer(Modifier.height(8.dp)) // This was causing button to not be at bottom
                     }

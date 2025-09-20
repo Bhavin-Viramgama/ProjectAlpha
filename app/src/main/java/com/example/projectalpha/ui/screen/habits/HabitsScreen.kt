@@ -25,6 +25,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
@@ -128,7 +129,13 @@ fun HabitsScreen(habitsViewModel: HabitsViewModel) {
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = CardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .4f),
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    disabledContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                )
             ) {
                 Row(
                     modifier = Modifier
@@ -159,7 +166,7 @@ fun HabitsScreen(habitsViewModel: HabitsViewModel) {
             ) {
                 Text(
                     text = if (currentFilterType == HabitFilterType.TODAY) "Today's Habits" else "All Habits",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(bottom = 16.dp, top = 8.dp)
                 )
 
@@ -258,7 +265,7 @@ fun HabitFilterButton(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
             contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
         ),
-        border = ButtonDefaults.outlinedButtonBorder.takeIf { !isSelected } // No border if selected and filled
+        border = ButtonDefaults.outlinedButtonBorder.takeIf { isSelected } // No border if selected and filled
     ) {
         Text(text, style = MaterialTheme.typography.labelMedium)
     }
@@ -317,14 +324,75 @@ fun HabitItemCard(
 
                 // Name and Days Column
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = habit.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row (horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()){
+                        Text(
+                            text = habit.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Row (verticalAlignment = Alignment.CenterVertically){ // Buttons side by side
+                            if (habit.streakCount > 0) {
+                                Row{
+                                    Icon(
+                                        painterResource(id = R.drawable.firefill),
+                                        contentDescription = "Streak",
+                                        tint = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primary else Color(0xFFE65100),
+                                        modifier = Modifier.size(20.dp) // Slightly smaller
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        text = habit.streakCount.toString(),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primary else Color(0xFFE65100)
+                                    )
+                                }
+                            } else {
+                                // Placeholder for alignment if no streak, or adjust layout
+                                Spacer(Modifier.height(20.dp)) // Matches rough height of streak row
+                            }
+                            Spacer(Modifier.width(18.dp))
+
+                            /*IconButton( // Toggle Graph
+                                onClick = {
+                                    showContributionGraph = !showContributionGraph
+                                    if (showContributionGraph) {
+                                        showActions = false // Hide actions if showing graph
+                                        habitsViewModel.resetGraphMonthToCurrent() // Reset to current month when opening
+                                    }
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Email, // Graph icon
+                                    contentDescription = "Show contribution graph",
+                                    tint = if (showContributionGraph) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                             */
+                            IconButton( // Toggle Edit/Delete actions
+                                onClick = {
+                                    showActions = !showActions
+                                    if (showActions) showContributionGraph = false // Hide graph
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Edit, // Or MoreVert
+                                    contentDescription = "Show actions",
+                                    tint = if (showActions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                        }
+                    }
+
                     Spacer(Modifier.height(4.dp))
                     DayAbbreviationsRow(daysOfWeek = habit.daysOfWeek)
                 }
@@ -335,62 +403,6 @@ fun HabitItemCard(
                 Column(horizontalAlignment = Alignment.End) {
 
 
-                    Row { // Buttons side by side
-                        if (habit.streakCount > 0) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    painterResource(id = R.drawable.firefill),
-                                    contentDescription = "Streak",
-                                    tint = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primary else Color(0xFFE65100),
-                                    modifier = Modifier.size(20.dp) // Slightly smaller
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    text = habit.streakCount.toString(),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primary else Color(0xFFE65100)
-                                )
-                            }
-                        } else {
-                            // Placeholder for alignment if no streak, or adjust layout
-                            Spacer(Modifier.height(20.dp)) // Matches rough height of streak row
-                        }
-                        Spacer(Modifier.width(18.dp))
-
-                        /*IconButton( // Toggle Graph
-                            onClick = {
-                                showContributionGraph = !showContributionGraph
-                                if (showContributionGraph) {
-                                    showActions = false // Hide actions if showing graph
-                                    habitsViewModel.resetGraphMonthToCurrent() // Reset to current month when opening
-                                }
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Filled.Email, // Graph icon
-                                contentDescription = "Show contribution graph",
-                                tint = if (showContributionGraph) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                         */
-                        IconButton( // Toggle Edit/Delete actions
-                            onClick = {
-                                showActions = !showActions
-                                if (showActions) showContributionGraph = false // Hide graph
-                            },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                Icons.Filled.Edit, // Or MoreVert
-                                contentDescription = "Show actions",
-                                tint = if (showActions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                    }
                 }
             }
 
@@ -460,7 +472,7 @@ fun DayAbbreviationsRow(daysOfWeek: List<String>) {
                         },
                         CircleShape
                     )
-                    .padding(horizontal = 5.dp, vertical = 3.dp)
+                    .padding(horizontal = 10.dp, vertical = 3.dp)
             )
         }
     }
@@ -494,26 +506,6 @@ fun HabitActionButtons(onEdit: () -> Unit, onDelete: () -> Unit) {
     }
 }
 
-@Composable
-fun HabitContributionGraphPlaceholder(habitName: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(150.dp) // Placeholder height
-            .padding(16.dp)
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                RoundedCornerShape(8.dp)
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            "Contribution Graph for '$habitName' (Coming Soon!)",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
 
 // Ensure AnimatedCompletionIcon is defined as provided previously or integrated.
 @Composable
@@ -601,7 +593,13 @@ fun AddEditHabitDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardColors(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                disabledContainerColor = MaterialTheme.colorScheme.inversePrimary,
+                disabledContentColor = MaterialTheme.colorScheme.inverseOnSurface
+            )
         ) {
             Column(
                 modifier = Modifier
@@ -732,12 +730,12 @@ fun DayChip(
 //            selected = TODO()
 //        ),
         colors = FilterChipDefaults.filterChipColors(
-            containerColor = Color.Transparent, // More subtle unselected chip
-            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = .35f),
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .5f),
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+            iconColor = MaterialTheme.colorScheme.onPrimary,
+            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
         )
     )
 }

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
@@ -26,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -39,8 +42,10 @@ import androidx.compose.ui.window.Dialog
 import com.example.projectalpha.viewmodel.DEFAULT_LONG_BREAK_DURATION_SECONDS
 import com.example.projectalpha.viewmodel.DEFAULT_SHORT_BREAK_DURATION_SECONDS
 import com.example.projectalpha.viewmodel.DEFAULT_WORK_DURATION_SECONDS
+import com.example.projectalpha.viewmodel.PomodoroDurations
 import com.example.projectalpha.viewmodel.PomodoroSessionType
 import com.example.projectalpha.viewmodel.PomodoroViewModel
+import kotlin.math.abs
 
 @SuppressLint("DefaultLocale")
 @Composable
@@ -113,9 +118,12 @@ fun PomodoroScreen(pomodoroViewModel: PomodoroViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues) // Apply padding from Scaffold
-                .padding(16.dp), // Additional screen padding
+                .padding(24.dp), // Additional screen padding
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceAround // Distribute space
+            verticalArrangement = Arrangement.spacedBy(
+                space = 55.dp,
+                alignment = Alignment.Top
+            )
         ) {
             Text(
                 text = sessionTypeTitle,
@@ -209,8 +217,7 @@ fun ControlButtons(
                 imageVector = Icons.Filled.Refresh,
                 contentDescription = "Reset Timer",
                 modifier = Modifier.size(36.dp),
-                tint = if (canReset) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
-            )
+                tint = if (canReset) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)            )
         }
 
         FilledIconButton( // start/pause button
@@ -296,7 +303,13 @@ fun CustomScrollableTimePickerDialog(
             shape = MaterialTheme.shapes.large,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            colors = CardColors(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                disabledContainerColor = MaterialTheme.colorScheme.inversePrimary,
+                disabledContentColor = MaterialTheme.colorScheme.inverseOnSurface
+            )
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -371,7 +384,9 @@ fun ScrollableNumberPicker(
     val centralItemTextStyle = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.primary)
     val peripheralItemTextStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-    Box(modifier = modifier.height(itemHeight * visibleItemsCount)) {
+    Box(modifier = modifier.height(itemHeight * visibleItemsCount).clip(
+        RoundedCornerShape(50f)).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 1f))
+    ) {
         LazyColumn(
             state = listState,
             flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
@@ -426,7 +441,7 @@ private fun calculateCenterIndex(listState: LazyListState, rangeSize: Int): Int 
 
     val viewportCenterY = layoutInfo.viewportSize.height / 2
     val centerItem = layoutInfo.visibleItemsInfo.minByOrNull {
-        kotlin.math.abs((it.offset.toFloat() + it.size.toFloat() / 2) - viewportCenterY.toFloat())
+        abs((it.offset.toFloat() + it.size.toFloat() / 2) - viewportCenterY.toFloat())
     }
     // The index from visibleItemsInfo is the absolute index in the LazyColumn items list,
     // which includes the top padding item.
@@ -447,7 +462,7 @@ private fun calculateCenterIndex(listState: LazyListState, rangeSize: Int): Int 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditDurationsDialog(
-    currentDurations: com.example.projectalpha.viewmodel.PomodoroDurations,
+    currentDurations: PomodoroDurations,
     onDismiss: () -> Unit,
     onSave: (workSeconds: Int, shortBreakSeconds: Int, longBreakSeconds: Int) -> Unit
 ) {
@@ -460,7 +475,13 @@ fun EditDurationsDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            shape = MaterialTheme.shapes.large
+            shape = MaterialTheme.shapes.large,
+            colors = CardColors(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                disabledContainerColor = MaterialTheme.colorScheme.inversePrimary,
+                disabledContentColor = MaterialTheme.colorScheme.inverseOnSurface
+            )
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
