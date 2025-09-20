@@ -251,28 +251,42 @@ fun CustomScrollableTimePickerDialog(
     val minutesRange = (0..59).toList()
     val secondsRange = (0..59).toList()
 
+    // Ensure initial values are within range to prevent LazyListState crash
+    val validInitialMinutes = initialMinutes.coerceIn(minutesRange.first(), minutesRange.last())
+    val validInitialSeconds = initialSeconds.coerceIn(secondsRange.first(), secondsRange.last())
+
+
     val minutesListState = rememberLazyListState(initialFirstVisibleItemIndex = initialMinutes)
     val secondsListState = rememberLazyListState(initialFirstVisibleItemIndex = initialSeconds)
 
-    var selectedMinutes by remember { mutableStateOf(initialMinutes) }
-    var selectedSeconds by remember { mutableStateOf(initialSeconds) }
+    // These states are now primarily for displaying the current selection
+    // and for the LaunchedEffects to update them after scrolling stops for visual feedback.
+    // The final value on "Set" will be read directly.
+    var currentDisplayedMinutes by remember { mutableStateOf(validInitialMinutes) }
+    var currentDisplayedSeconds by remember { mutableStateOf(validInitialSeconds) }
 
     // Update selected values when scroll stops (due to snapping)
     LaunchedEffect(minutesListState.isScrollInProgress) {
         if (!minutesListState.isScrollInProgress) {
-            val centerIndex = calculateCenterIndex(minutesListState)
-            if (centerIndex in minutesRange.indices) {
-                selectedMinutes = minutesRange[centerIndex]
+            val centerIndex = calculateCenterIndex(minutesListState, minutesRange.size)
+            if (centerIndex >= 0 && centerIndex < minutesRange.size) {
+                currentDisplayedMinutes = minutesRange[centerIndex]
             }
         }
     }
     LaunchedEffect(secondsListState.isScrollInProgress) {
         if (!secondsListState.isScrollInProgress) {
-            val centerIndex = calculateCenterIndex(secondsListState)
-            if (centerIndex in secondsRange.indices) {
-                selectedSeconds = secondsRange[centerIndex]
+            val centerIndex = calculateCenterIndex(secondsListState, secondsRange.size)
+            if (centerIndex >= 0 && centerIndex < minutesRange.size) {
+                currentDisplayedSeconds = secondsRange[centerIndex]
             }
         }
+    }
+
+    // Scroll to initial position after composition if needed (especially if list state changes)
+    LaunchedEffect(Unit) {
+        minutesListState.scrollToItem(validInitialMinutes)
+        secondsListState.scrollToItem(validInitialSeconds)
     }
 
 
@@ -296,10 +310,10 @@ fun CustomScrollableTimePickerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ScrollableNumberPicker(
+                        label = "Minutes",
                         range = minutesRange,
                         listState = minutesListState,
-                        onValueSelected = { selectedMinutes = it },
-                        label = "Minutes",
+                        currentDisplayedValue = currentDisplayedMinutes, // Pass for styling
                         modifier = Modifier.weight(1f)
                     )
                     Text(
@@ -308,10 +322,10 @@ fun CustomScrollableTimePickerDialog(
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                     ScrollableNumberPicker(
+                        label = "Seconds",
                         range = secondsRange,
                         listState = secondsListState,
-                        onValueSelected = { selectedSeconds = it },
-                        label = "Seconds",
+                        currentDisplayedValue = currentDisplayedSeconds, // Pass for styling
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -324,7 +338,16 @@ fun CustomScrollableTimePickerDialog(
                 ) {
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = { onTimeSet(selectedMinutes, selectedSeconds) }) {
+                    Button(onClick = {
+                        // Read the truly centered item directly when "Set" is clicked
+                        val finalMinutesIndex = calculateCenterIndex(minutesListState, minutesRange.size)
+                        val finalSecondsIndex = calculateCenterIndex(secondsListState, secondsRange.size)
+
+                        val finalMinutes = if (finalMinutesIndex in minutesRange.indices) minutesRange[finalMinutesIndex] else initialMinutes
+                        val finalSeconds = if (finalSecondsIndex in secondsRange.indices) secondsRange[finalSecondsIndex] else initialSeconds
+
+                        onTimeSet(finalMinutes, finalSeconds)
+                    }) {
                         Text("Set")
                     }
                 }
@@ -336,33 +359,16 @@ fun CustomScrollableTimePickerDialog(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ScrollableNumberPicker(
+    label: String,
     range: List<Int>,
     listState: LazyListState,
-    onValueSelected: (Int) -> Unit, // Callback when a value is considered selected by snapping
-    label: String,
+    currentDisplayedValue: Int, // Used for styling the centered item
     modifier: Modifier = Modifier,
     itemHeight: Dp = 48.dp, // Height of each item in the picker
     visibleItemsCount: Int = 3 // How many items are visible (e.g., center + one above + one below)
 ) {
     val centralItemTextStyle = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.primary)
     val peripheralItemTextStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-    val itemHeightPx = with(LocalDensity.current) { itemHeight.toPx() }
-
-    // This derived state helps in updating the text style based on the centered item.
-    val centeredIndex by remember {
-        derivedStateOf {
-            if (listState.layoutInfo.visibleItemsInfo.isEmpty() || listState.isScrollInProgress) {
-                // While scrolling or if not laid out, we might not have a definitive center,
-                // or we use the estimated center based on firstVisibleItemIndex.
-                // For simplicity, we'll use a more direct way in LaunchedEffect to set the final value.
-                // Here, we just determine which item is *visually* closest to center for styling.
-                calculateCenterIndex(listState)
-            } else {
-                calculateCenterIndex(listState)
-            }
-        }
-    }
-
 
     Box(modifier = modifier.height(itemHeight * visibleItemsCount)) {
         LazyColumn(
@@ -374,13 +380,15 @@ fun ScrollableNumberPicker(
             // Padding items to allow first and last actual numbers to reach the center
             items(1) { Spacer(Modifier.height(itemHeight * (visibleItemsCount / 2))) }
 
-            items(range.size) { index ->
-                val itemValue = range[index]
-                val isCentered = index == centeredIndex
+            items(items = range, key = { it }) { itemValue -> // Use key for better performance
+                // Determine if this item is the one visually centered
+                // This is a bit more complex now that selection is decoupled.
+                // We rely on currentDisplayedValue which is updated by LaunchedEffect after scroll stops.
+                val isVisuallyCentered = itemValue == currentDisplayedValue // Heuristic for styling
 
                 Text(
                     text = String.format("%02d", itemValue),
-                    style = if (isCentered) centralItemTextStyle else peripheralItemTextStyle,
+                    style = if (isVisuallyCentered) centralItemTextStyle else peripheralItemTextStyle,
                     modifier = Modifier
                         .height(itemHeight)
                         .fillMaxWidth()
@@ -396,14 +404,14 @@ fun ScrollableNumberPicker(
         HorizontalDivider(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = itemHeight * (visibleItemsCount / 2) - (itemHeight / 2)+20.dp), // Adjust position
+                .offset(y = itemHeight * (visibleItemsCount / 2) - (itemHeight / 2)/*+20.dp*/), // Adjust position
             thickness = 1.dp,
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
         )
         HorizontalDivider(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = -(itemHeight * (visibleItemsCount / 2) - (itemHeight / 2) +20.dp)), // Adjust position
+                .offset(y = -(itemHeight * (visibleItemsCount / 2) - (itemHeight / 2)/* +20.dp*/)), // Adjust position
             thickness = 1.dp,
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
         )
@@ -411,7 +419,7 @@ fun ScrollableNumberPicker(
 }
 
 // Helper to find the visually centered item index
-private fun calculateCenterIndex(listState: LazyListState): Int {
+private fun calculateCenterIndex(listState: LazyListState, rangeSize: Int): Int {
     val layoutInfo = listState.layoutInfo
     if (layoutInfo.visibleItemsInfo.isEmpty()) return -1
 
@@ -419,7 +427,20 @@ private fun calculateCenterIndex(listState: LazyListState): Int {
     val centerItem = layoutInfo.visibleItemsInfo.minByOrNull {
         kotlin.math.abs((it.offset.toFloat() + it.size.toFloat() / 2) - viewportCenterY.toFloat())
     }
-    return centerItem?.index?.minus(1) ?: listState.firstVisibleItemIndex // -1 because of the padding item
+    // The index from visibleItemsInfo is the absolute index in the LazyColumn items list,
+    // which includes the top padding item.
+    // If the list has 1 padding item, then item at index 0 of our 'range' is at LazyColumn index 1.
+    val actualDataIndex = centerItem?.index?.minus(1) // Adjust for the top padding item
+
+    return if (actualDataIndex != null && actualDataIndex >= 0 && actualDataIndex < rangeSize) {
+        actualDataIndex
+    } else {
+        // Fallback if calculation is off or items are not fully visible
+        // This might happen during fast scrolls or edge cases.
+        // A simple fallback could be the first visible item from the data range.
+        val firstVisibleDataIndex = (listState.firstVisibleItemIndex - 1).coerceIn(0, rangeSize - 1)
+        firstVisibleDataIndex
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
