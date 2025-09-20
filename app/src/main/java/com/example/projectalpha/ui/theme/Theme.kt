@@ -22,7 +22,8 @@ private val DarkColorScheme = darkColorScheme(
     onSecondary = PurpleGrey40,
     onTertiary = Pink40,
     onBackground = TextPrimaryDark,
-    onSurface = TextPrimaryDark
+    onSurface = TextPrimaryDark,
+    surfaceTint = selectedNavItemColorDark
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -35,7 +36,8 @@ private val LightColorScheme = lightColorScheme(
     onSecondary = Color.White,
     onTertiary = Color.White,
     onBackground = TextPrimary,
-    onSurface = TextPrimary
+    onSurface = TextPrimary,
+    surfaceTint = selectedNavItemColor
 
     /* Other default colors to override
     surfaceVariant = Color(0xFFE7E0EC),

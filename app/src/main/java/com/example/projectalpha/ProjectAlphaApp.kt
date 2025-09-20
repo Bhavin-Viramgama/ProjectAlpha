@@ -20,6 +20,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,10 +41,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.projectalpha.ui.navigation.Screen
-import com.example.projectalpha.ui.theme.HighPriorityFont1
+//import com.example.projectalpha.ui.theme.HighPriorityFont1
 import com.example.projectalpha.ui.navigation.bottomNavItems
 import com.example.projectalpha.ui.screen.habits.HabitsScreen
-import com.example.projectalpha.ui.screen.home.HomeScreen
+//import com.example.projectalpha.ui.screen.home.HomeScreen
 import com.example.projectalpha.ui.screen.pomodoro.PomodoroScreen
 import com.example.projectalpha.ui.screen.profile.ProfileScreen
 import com.example.projectalpha.ui.screen.todo.ToDoScreen
@@ -58,6 +59,9 @@ import com.example.projectalpha.viewmodel.ProfileViewModelFactory
 import com.example.projectalpha.viewmodel.ToDoViewModel
 import com.example.projectalpha.viewmodel.ToDoViewModelFactory
 import kotlin.collections.forEach
+import androidx.compose.runtime.SideEffect
+import com.example.projectalpha.ui.theme.selectedNavItemColor
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +96,25 @@ fun ProjectAlphaApp() {
         )
     )
     // ---
+    // --- System UI Controller Setup ---
+    val systemUiController = rememberSystemUiController()
+    val desiredStatusBarColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp) // Set your desired status bar color here
+
+    SideEffect {
+        systemUiController.setStatusBarColor(
+            color = desiredStatusBarColor,
+        )
+       /* // You can also control the navigation bar color if needed:
+        // systemUiController.setNavigationBarColor(
+        //    color = Color.Black, // Or your desired nav bar color
+        //    darkIcons = false // If nav bar is dark, icons should be light
+        // )
+
+        */
+    }
+    // --- End System UI Controller Setup ---
+
+
 
     val streakEntity by homeViewModel.streakPoints.collectAsState() // Observe from HomeViewModel
     val streakPointsDisplay = streakEntity?.points ?: 0
@@ -110,6 +133,9 @@ fun ProjectAlphaApp() {
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(currentScreenTitle, style = MaterialTheme.typography.titleLarge) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp), // Example: Default M3 TopAppBar color
+                ),
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -142,7 +168,8 @@ fun ProjectAlphaApp() {
             if (isBottomBarVisible) {
                 AppBottomNavigationBar(navController = navController, items = bottomNavItems)
             }
-        }
+        },
+
     ) { innerPadding ->
         AppNavHost(
             navController = navController,
@@ -161,7 +188,7 @@ fun ProjectAlphaApp() {
 @Composable
 fun AppBottomNavigationBar(navController: NavHostController, items: List<Screen>) {
     NavigationBar(
-        containerColor = Color(0xFF1E1E1E), // background
+        containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp), // background
         tonalElevation = 8.dp,
         modifier = Modifier.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
     ) {

@@ -60,6 +60,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3) // Or libs.androidx.material if you are using Material 2
 
+    //System UI Controller
+    implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0") // Use the latest version
+
     // Room (as you had it before)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

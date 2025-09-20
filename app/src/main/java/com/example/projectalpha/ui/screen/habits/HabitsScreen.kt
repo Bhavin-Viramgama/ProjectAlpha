@@ -274,7 +274,7 @@ fun HabitItemCard(
         label = "cardElevation"
         // Removed .value as 'by' delegate handles it
     )
-    val backgroundColor = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+    val backgroundColor = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
     var showActions by rememberSaveable { mutableStateOf(false) }
 
     Card(

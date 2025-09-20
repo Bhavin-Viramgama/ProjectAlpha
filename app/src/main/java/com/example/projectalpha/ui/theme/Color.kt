@@ -53,3 +53,6 @@ val TextPrimary = Color.Black
 val TextPrimaryDark = Color.White
 val TextSecondary = Color(0xFF757575)
 val TextSecondaryDark = Color(0xFFB0B0B0)
+
+val selectedNavItemColor = Color(0xFF000000)
+val selectedNavItemColorDark = Color(0xFFFFFFFF)
