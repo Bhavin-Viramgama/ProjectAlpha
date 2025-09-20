@@ -5,8 +5,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Face
 //import androidx.compose.material.icons.filled.FitnessCenter // Or a better habit icon
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
 //import androidx.compose.material.icons.filled.Timer // Or a Pomodoro icon
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -18,6 +16,18 @@ sealed class Screen(val route: String, val title: String? = null, val icon: Imag
     object Pomodoro : Screen("pomodoro", "Pomodoro", Icons.Filled.Notifications)
     object Habits : Screen("habits", "Habits", Icons.Filled.Face)
     object Profile : Screen("profile_nav", "Profile") // No icon for bottom nav
+
+    // New screen for adding/editing tasks
+    object AddEditTask : Screen(
+        route = "add_edit_task", // Base route
+        title = "Task Details"   // Default title, can be dynamic
+    ) {
+        // For navigating with an optional taskId argument (for editing)
+        fun PushedTasks(taskId: Int? = null): String {
+            return if (taskId != null) "$route?taskId=$taskId" else route
+        }
+        const val ARG_TASK_ID = "taskId" // Argument name
+    }
 }
 
 // List of bottom navigation items

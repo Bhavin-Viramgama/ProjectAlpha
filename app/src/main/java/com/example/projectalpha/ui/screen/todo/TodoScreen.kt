@@ -1,6 +1,5 @@
 package com.example.projectalpha.ui.screen.todo
 
-import kotlinx.coroutines.launch
 import android.icu.lang.UCharacter.toUpperCase
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -39,17 +38,16 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.room.util.TableInfo
+import androidx.navigation.NavHostController
 import com.example.projectalpha.data.local.entity.TaskEntity
+import com.example.projectalpha.ui.navigation.Screen
 import com.example.projectalpha.ui.theme.AppTypography
-import com.example.projectalpha.ui.theme.HighPriorityFont
 import com.example.projectalpha.ui.theme.HighPriorityFont1
-import com.example.projectalpha.ui.theme.LowPriorityFont
 import com.example.projectalpha.ui.theme.LowPriorityFont1
-import com.example.projectalpha.ui.theme.MediumPriorityFont
 import com.example.projectalpha.ui.theme.MediumPriorityFont1
 import com.example.projectalpha.viewmodel.ToDoViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -60,14 +58,14 @@ import java.time.format.FormatStyle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun ToDoScreen(toDoViewModel: ToDoViewModel) {
+fun ToDoScreen(toDoViewModel: ToDoViewModel,navController: NavHostController) {
     val tasks by toDoViewModel.tasksForSelectedDate.collectAsState()
     val isLoading by toDoViewModel.isLoading.collectAsState()
     val error by toDoViewModel.error.collectAsState()
     val selectedDate by toDoViewModel.selectedDate.collectAsState()
 
-    var showAddTaskDialog by remember { mutableStateOf(false) }
-    var taskToEdit by remember { mutableStateOf<TaskEntity?>(null) }
+    //var showAddTaskDialog by remember { mutableStateOf(false) }
+    //var taskToEdit by remember { mutableStateOf<TaskEntity?>(null) }
     var taskToDelete by remember { mutableStateOf<TaskEntity?>(null) }
 
     //Code for animation-----------------------------------------------
@@ -86,8 +84,7 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                taskToEdit = null // Ensure we are adding, not editing
-                showAddTaskDialog = true
+                navController.navigate(Screen.AddEditTask.PushedTasks())
             }) {
                 Icon(Icons.Filled.Add, "Add Task")
             }
@@ -159,7 +156,6 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
                     modifier = Modifier.padding(16.dp)
                 )
             } else if (!isLoading && error == null) {
-
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -180,8 +176,7 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
                                 task = task,
                                 onToggleComplete = { toDoViewModel.toggleTaskCompletion(task) },
                                 onEdit = {
-                                    taskToEdit = task
-                                    showAddTaskDialog = true
+                                    navController.navigate(Screen.AddEditTask.PushedTasks(task.id))
                                 },
                                 onDelete = {
                                         taskToDelete = task
@@ -197,7 +192,7 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
         }
     }
 
-    if (showAddTaskDialog) {
+   /* if (showAddTaskDialog) {
         AddTaskDialog(
             taskToEdit = taskToEdit,
             selectedDate = selectedDate,
@@ -221,7 +216,7 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
             }
         )
     }
-
+*/
     val coroutineScope = rememberCoroutineScope()
     taskToDelete?.let { task ->
         ConfirmDeleteDialog(
@@ -239,7 +234,10 @@ fun ToDoScreen(toDoViewModel: ToDoViewModel) {
             }
         )
     }
+
 }
+
+
 
 @Composable
 fun TaskItem(
@@ -262,7 +260,10 @@ fun TaskItem(
         else -> Color.Transparent
     }
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clickable { isExpanded = !isExpanded },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 2.dp)
+            .clickable { isExpanded = !isExpanded },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
 
@@ -327,7 +328,9 @@ fun TaskItem(
                             textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
                             color = if (task.isCompleted) Color.Gray else MaterialTheme.colorScheme.onSurfaceVariant
                         ),
-                        modifier = Modifier.padding(top = 4.dp).animateContentSize(),
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .animateContentSize(),
                         maxLines = if(isExpanded) Int.MAX_VALUE else 2,
                         overflow = TextOverflow.Ellipsis
                     )

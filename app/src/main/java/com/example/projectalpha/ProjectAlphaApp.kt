@@ -1,17 +1,15 @@
 package com.example.projectalpha
 
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -60,7 +58,9 @@ import com.example.projectalpha.viewmodel.ToDoViewModel
 import com.example.projectalpha.viewmodel.ToDoViewModelFactory
 import kotlin.collections.forEach
 import androidx.compose.runtime.SideEffect
-import com.example.projectalpha.ui.theme.selectedNavItemColor
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.projectalpha.ui.screen.todo.AddEditTaskScreen
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,46 +122,82 @@ fun ProjectAlphaApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val currentScreenTitle = bottomNavItems.find { it.route == currentDestination?.route }?.title
+    /*val currentScreenTitle = bottomNavItems.find { it.route == currentDestination?.route }?.title
         ?: Screen.Profile.title.takeIf { currentDestination?.route == Screen.Profile.route }
+        ?: Screen.AddEditTask.title.takeIf { currentDestination?.route == Screen.AddEditTask.route }
         ?: "Project Alpha" // Default title
 
+     */
+
+    val currentScreenTitle = when (currentDestination?.route) {
+        Screen.ToDoList.route -> Screen.ToDoList.title
+        Screen.Pomodoro.route -> Screen.Pomodoro.title
+        Screen.Habits.route -> Screen.Habits.title
+        Screen.Profile.route -> Screen.Profile.title
+        // Check for AddEditTask route (base route without arguments)
+        // Or if you want to be more specific, you can check if route starts with Screen.AddEditTask.route
+        Screen.AddEditTask.route, Screen.AddEditTask.PushedTasks() -> { // Catches route with or without default args
+            // Dynamic title for Add/Edit Task Screen
+            val taskId = navBackStackEntry?.arguments?.getInt(Screen.AddEditTask.ARG_TASK_ID)
+            if (taskId == null || taskId == -1) "Add New Task" else "Edit Task"
+        }
+        else -> {
+            // Check against bottom nav items if it's one of them (handles dynamic titles if Screen object has one)
+            bottomNavItems.find { currentDestination?.hierarchy?.any { dest -> dest.route == it.route } == true }?.title
+                ?: "Project Alpha" // Default title
+        }
+    } ?: "Project Alpha" // Fallback if title is null
+
+
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+
+    // Determine if TopAppBar should be shown
+    val shouldShowTopAppBar = currentDestination?.route != Screen.AddEditTask.route &&
+            !currentDestination?.route.orEmpty().startsWith(Screen.AddEditTask.route + "?")
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(currentScreenTitle, style = MaterialTheme.typography.titleLarge) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp), // Example: Default M3 TopAppBar color
-                ),
-                actions = {
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .padding(2.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color(0xFF212121))
-                            .padding(4.dp)) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.firefill),
-                            modifier = Modifier.size(24.dp),
-                            contentDescription = "Streak Points",
-                            tint = Color.Unspecified
-                        )
+            if (shouldShowTopAppBar){
+                CenterAlignedTopAppBar(
+                    title = {
                         Text(
-                            text = streakPointsDisplay.toString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
-                            modifier = Modifier.padding(start = 4.dp, end = 8.dp)
+                            currentScreenTitle,
+                            style = MaterialTheme.typography.titleLarge
                         )
-                    }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp), // Example: Default M3 TopAppBar color
+                    ),
+                    actions = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(2.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color(0xFF212121))
+                                .padding(4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.firefill),
+                                modifier = Modifier.size(24.dp),
+                                contentDescription = "Streak Points",
+                                tint = Color.Unspecified
+                            )
+                            Text(
+                                text = streakPointsDisplay.toString(),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                                modifier = Modifier.padding(start = 4.dp, end = 8.dp)
+                            )
+                        }
 //                    IconButton(onClick = { navController.navigate(Screen.Profile.route) }) {
 //                        Icon(Icons.Filled.AccountCircle, "Profile")
 //                    }
-                },
-                scrollBehavior = scrollBehavior
-            )
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+            }
         },
         bottomBar = {
             val isBottomBarVisible = bottomNavItems.any { it.route == currentDestination?.route }
@@ -255,7 +291,8 @@ fun AppNavHost(
          */
 
         composable(Screen.ToDoList.route) {
-            ToDoScreen(toDoViewModel = toDoViewModel) // Pass the ToDoViewModel
+            ToDoScreen(toDoViewModel = toDoViewModel,
+                navController= navController) // Pass the ToDoViewModel
         }
         composable(Screen.Pomodoro.route) {
             PomodoroScreen(pomodoroViewModel = pomodoroViewModel) // Pass the PomodoroViewModel
@@ -265,6 +302,24 @@ fun AppNavHost(
         }
         composable(Screen.Profile.route) {
             ProfileScreen(profileViewModel = profileViewModel) // Pass the ProfileViewModel
+        }
+
+        // New route for Add/Edit Task Screen
+        composable(
+            route = Screen.AddEditTask.route + "?${Screen.AddEditTask.ARG_TASK_ID}={${Screen.AddEditTask.ARG_TASK_ID}}",
+            arguments = listOf(
+                navArgument(Screen.AddEditTask.ARG_TASK_ID) {
+                    type = NavType.IntType
+                    defaultValue = -1 // Default if no ID is passed (for adding new task)
+                }
+            )
+        ) { backStackEntry ->
+            val taskId = backStackEntry.arguments?.getInt(Screen.AddEditTask.ARG_TASK_ID)
+            AddEditTaskScreen(
+                navController = navController,
+                toDoViewModel = toDoViewModel,
+                taskId = if (taskId == -1) null else taskId // Pass null for new task
+            )
         }
     }
 }

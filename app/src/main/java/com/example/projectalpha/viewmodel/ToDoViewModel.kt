@@ -9,6 +9,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
@@ -80,7 +81,16 @@ This automatically cancels the old collector when the date changes.
         }
     }
 
-
+    // Function to get a single task by ID for the edit screen
+    // This returns a Flow, the UI will collect it.
+    fun getTaskById(taskId: Int): Flow<TaskEntity?> {
+        return taskRepository.getTaskById(taskId)
+            .catch { e ->
+                _error.value = "Failed to load task for editing: ${e.message}"
+                // Emit null or handle error as appropriate for the flow
+                emit(null)
+            }
+    }
 
     fun selectDate(date: LocalDate) {
         _selectedDate.value = date
