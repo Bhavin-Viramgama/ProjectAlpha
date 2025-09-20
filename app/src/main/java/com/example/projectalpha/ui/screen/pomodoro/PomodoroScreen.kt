@@ -405,14 +405,14 @@ fun ScrollableNumberPicker(
         HorizontalDivider(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = itemHeight * (visibleItemsCount / 2) - (itemHeight / 2)/*+20.dp*/), // Adjust position
+                .offset(y = itemHeight * (visibleItemsCount / 2) - (itemHeight / 2)+20.dp), // Adjust position
             thickness = 1.dp,
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
         )
         HorizontalDivider(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = -(itemHeight * (visibleItemsCount / 2) - (itemHeight / 2)/* +20.dp*/)), // Adjust position
+                .offset(y = -(itemHeight * (visibleItemsCount / 2) - (itemHeight / 2)+20.dp)), // Adjust position
             thickness = 1.dp,
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
         )

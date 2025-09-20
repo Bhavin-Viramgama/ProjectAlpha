@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -280,12 +281,12 @@ fun HabitItemCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp)) // Clipping the card itself
+            //.clip(RoundedCornerShape(12.dp)) // Clipping the card itself
             .pointerInput(Unit) { // Apply pointerInput to the Card
                 detectTapGestures(
                     //onLongPress = { showActions = true },
                     onTap = {
-                            showActions = !showActions
+                        showActions = !showActions
                     }
                 )
             },
@@ -296,6 +297,7 @@ fun HabitItemCard(
         Column {
             Row(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
                     .animateContentSize(),
                 verticalAlignment = Alignment.CenterVertically
@@ -303,16 +305,41 @@ fun HabitItemCard(
                 AnimatedCompletionIcon(isCompleted = habit.isCompletedForToday, onToggleComplete = onToggleComplete)
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = habit.name,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            textDecoration = if (habit.isCompletedForToday) TextDecoration.LineThrough else null,
-                            color = if (habit.isCompletedForToday) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            else MaterialTheme.colorScheme.onSurface
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = habit.name,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                //textDecoration = if (habit.isCompletedForToday) TextDecoration.LineThrough else null,
+                                color = if (habit.isCompletedForToday) MaterialTheme.colorScheme.onSurface.copy(
+                                    alpha = 0.6f
+                                )
+                                else MaterialTheme.colorScheme.onSurface
+                            ),
+                            fontWeight = FontWeight.Bold, // Make title always bold
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (habit.streakCount > 0) {
+                            Spacer(Modifier.width(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.End) {
+                                Icon(
+                                    painterResource(id = R.drawable.firefill), // Use your project's R
+                                    contentDescription = "Streak",
+                                    tint = Color(0xFFE65100),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = habit.streakCount.toString(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFE65100)
+                                )
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(4.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -322,7 +349,7 @@ fun HabitItemCard(
                         habit.daysOfWeek.map { it.take(3).uppercase() }.forEach { dayAbbreviation ->
                             val isToday = dayAbbreviation.equals(todayShortName, ignoreCase = true)
                             Text(
-                                dayAbbreviation,
+                                text = dayAbbreviation,
                                 fontSize = 10.sp,
                                 fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
                                 color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -331,56 +358,56 @@ fun HabitItemCard(
                                         if (isToday) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
                                         CircleShape
                                     )
-                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                                    .padding(horizontal = 5.dp, vertical = 2.dp),
+                                maxLines = 1 // Ensure day names don't wrap
                             )
                         }
                     }
                 }
-                Spacer(Modifier.width(8.dp))
-                if (habit.streakCount > 0) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painterResource(id = R.drawable.firefill), // Use your project's R
-                            contentDescription = "Streak",
-                            tint = Color(0xFFE65100),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = habit.streakCount.toString(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = if (habit.isCompletedForToday && habit.streakCount > 0) MaterialTheme.colorScheme.primary else Color(0xFFE65100)
-                        )
-                    }
-                }
+
+
             }
 
             AnimatedVisibility(visible = showActions) {
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-                                .copy(alpha = 0.5f)
-                        )
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = { onEdit(); showActions = false }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Edit", style = MaterialTheme.typography.labelMedium)
-                    }
-                    TextButton(onClick = { onDelete(); showActions = false }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Delete", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+                Column {
+                    HorizontalDivider(
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                                    .copy(alpha = 0.5f)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { onEdit(); showActions = false }) {
+                            Icon(
+                                Icons.Filled.Edit,
+                                contentDescription = "Edit",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text("Edit", style = MaterialTheme.typography.labelMedium)
+                        }
+                        TextButton(onClick = { onDelete(); showActions = false }) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = "Delete",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "Delete",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
