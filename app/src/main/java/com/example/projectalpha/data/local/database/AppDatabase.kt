@@ -6,15 +6,18 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.projectalpha.data.local.dao.HabitDao
 import com.example.projectalpha.data.local.dao.StreakDao
 import com.example.projectalpha.data.local.dao.TaskDao
 import com.example.projectalpha.data.local.dao.UserDao
+import com.example.projectalpha.data.local.dao.HabitCompletionLogDao
 import com.example.projectalpha.data.local.entity.HabitEntity
 import com.example.projectalpha.data.local.entity.StreakEntity
 import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.data.local.entity.UserEntity
+import com.example.projectalpha.data.local.entity.HabitCompletionLogEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,9 +29,14 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 @Database(
-    entities = [TaskEntity::class, HabitEntity::class, StreakEntity::class, UserEntity::class],
-    version = 3, // Keep your current version
-    exportSchema = false // Set to true if you plan to inspect schemas or add migrations later
+    entities = [
+        TaskEntity::class,
+        HabitEntity::class,
+        StreakEntity::class,
+        UserEntity::class,
+        HabitCompletionLogEntity::class],
+    version = 4, // Keep your current version
+    exportSchema = true // Set to true if you plan to inspect schemas or add migrations later
 )
 @TypeConverters(Converters::class) // Ensure your Converters class is correctly implemented
 abstract class AppDatabase : RoomDatabase() {
@@ -37,11 +45,36 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun habitDao(): HabitDao
     abstract fun streakDao(): StreakDao
     abstract fun userDao(): UserDao
+    abstract fun habitCompletionLogDao(): HabitCompletionLogDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
         private const val DATABASE_NAME = "project_alpha_db"
+
+        // --- MIGRATION EXAMPLE ---
+        // You'll need a migration from version 3 to 4 because you added a new table.
+        // If your previous version didn't have exportSchema = true, Room can't auto-generate.
+        // For now, if you are okay with losing data during development, fallbackToDestructiveMigration is fine.
+        // Otherwise, you need a real migration.
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // SQL to create the new habit_completion_logs table
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `habit_completion_logs` (
+                        `habitId` INTEGER NOT NULL, 
+                        `dateCompleted` INTEGER NOT NULL, 
+                        PRIMARY KEY(`habitId`, `dateCompleted`), 
+                        FOREIGN KEY(`habitId`) REFERENCES `habits`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                // Create indices separately if not included in CREATE TABLE above by Room's schema generation
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_habit_completion_logs_habitId` ON `habit_completion_logs` (`habitId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_habit_completion_logs_dateCompleted` ON `habit_completion_logs` (`dateCompleted`)")
+            }
+        }
 
         fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -51,7 +84,8 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addCallback(AppDatabaseCallback(context, scope)) // Pass context to callback
-                    .fallbackToDestructiveMigration() // For now, during development. Replace with migrations for release.
+                    // .fallbackToDestructiveMigration() // Use this if you don't want to write migrations yet
+                    .addMigrations(MIGRATION_3_4) // <<< ADD MIGRATION
                     .build()
                 INSTANCE = instance
                 instance
@@ -74,27 +108,24 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Removed onOpen as it's not strictly needed for this pre-population logic
+        // You might have an onOpen callback for different logic if needed.
+        // override fun onOpen(db: SupportSQLiteDatabase) {
+        // super.onOpen(db);
+        // Log.d("AppDatabaseCallback", "Database OPENED.");
+        // If you need to do something every time the DB opens (e.g., verify schema or run checks)
+        // }
+
 
         private suspend fun populateInitialData(database: AppDatabase) {
+            // ... (your existing task, habit, streak population logic) ...
+            // You might want to add some sample HabitCompletionLogEntity entries
+            // for testing, corresponding to your sample habits.
+            Log.d("AppDatabaseCallback", "Populating initial data...")
             val taskDao = database.taskDao()
             val habitDao = database.habitDao()
             val streakDao = database.streakDao()
-            // val userDao = database.userDao() // If you need to populate default user
+            val habitCompletionLogDao = database.habitCompletionLogDao()
 
-            // --- Idempotency Check (Optional but good for development) ---
-            // This prevents re-populating if the app is stopped right after DB creation
-            // and restarted, potentially calling onCreate again in some edge cases
-            // before the first population finishes.
-            // Requires synchronous methods in DAOs for the check.
-//            if (taskDao.getAllTasksList().isNotEmpty() || habitDao.getAllHabitsList().isNotEmpty()) {
-//                Log.d("AppDatabaseCallback", "Database already contains data. Skipping pre-population.")
-//                return
-//            }
-//            Log.d("AppDatabaseCallback", "Starting data population...")
-
-            // Add initial streak points
-            // Assuming StreakEntity ID 0 is the single row for the app's streak
             streakDao.insertOrUpdateStreak(StreakEntity(id = 0, points = 10))
 
             // Add sample tasks
@@ -179,7 +210,50 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             )
             Log.d("AppDatabaseCallback", "Sample habits inserted.")
-            Log.d("AppDatabaseCallback", "Data population finished.")
+
+            // Example of populating Habit and its logs
+            val medId = habitDao.insertHabit(
+                HabitEntity(
+                    name = "Morning Meditation",
+                    daysOfWeek = listOf(today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase(), "SATURDAY", "SUNDAY"),
+                    streakCount = 1, // Start with 1 if completed yesterday
+                    isCompletedForToday = false,
+                    lastCompletedDate = today.minusDays(1)
+                )
+            )
+            // Log completion for yesterday
+            habitCompletionLogDao.insertCompletionLog(HabitCompletionLogEntity(medId.toInt(), today.minusDays(1)))
+
+
+            val readId = habitDao.insertHabit(
+                HabitEntity(
+                    name = "Read for 30 Mins",
+                    daysOfWeek = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"),
+                    streakCount = 0, // No initial streak
+                    isCompletedForToday = false,
+                    lastCompletedDate = null
+                )
+            )
+            // Example: completed 2 and 3 days ago
+            habitCompletionLogDao.insertCompletionLog(HabitCompletionLogEntity(readId.toInt(), today.minusDays(2)))
+            habitCompletionLogDao.insertCompletionLog(HabitCompletionLogEntity(readId.toInt(), today.minusDays(3)))
+
+
+            habitDao.insertHabit(
+                HabitEntity(
+                    name = "Weekend Jog",
+                    daysOfWeek = listOf("SATURDAY", "SUNDAY"),
+                    isCompletedForToday = false,
+                    lastCompletedDate = null
+                )
+            )
+            habitDao.insertHabit(
+                HabitEntity(
+                    name = "Hydrate Well (Scheduled for today)",
+                    daysOfWeek = listOf(today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase())
+                )
+            )
+            Log.d("AppDatabaseCallback", "Sample data populated.")
         }
     }
 }

@@ -36,7 +36,7 @@ class ProjectAlphaApplication : Application() {
 
     // Repositories
     val taskRepository by lazy { TaskRepository(database.taskDao()) }
-    val habitRepository by lazy { HabitRepository(database.habitDao()) }
+    val habitRepository by lazy { HabitRepository(database.habitDao(), database.habitCompletionLogDao()) }
     val streakRepository by lazy { StreakRepository(database.streakDao()) }
 
     // Correctly initialize UserRepository

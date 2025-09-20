@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.outlined.CheckCircle // Consistent outlined icon for pending
 // Material 3 imports
 import androidx.compose.material3.AlertDialog
@@ -190,7 +191,9 @@ fun HabitsScreen(habitsViewModel: HabitsViewModel) {
                                     habitToEdit = habit
                                     showAddHabitDialog = true
                                 },
-                                onDelete = { habitToDelete = habit }
+                                onDelete = { habitToDelete = habit },
+                                habitsViewModel = habitsViewModel,
+                                onShowDetails = {/*TODO: If we want to show graph using button or something*/}
                             )
                         }
                         item {
@@ -268,153 +271,251 @@ fun HabitItemCard(
     habit: HabitEntity,
     onToggleComplete: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    habitsViewModel: HabitsViewModel,
+    onShowDetails: (HabitEntity) -> Unit
 ) {
-    val cardElevation by animateDpAsState(
-        targetValue =if (habit.isCompletedForToday) 2.dp else 6.dp,
-        label = "cardElevation"
-        // Removed .value as 'by' delegate handles it
-    )
-    val backgroundColor = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
     var showActions by rememberSaveable { mutableStateOf(false) }
+    var showContributionGraph by rememberSaveable { mutableStateOf(false) } // State for graph visibility
+
+    val cardElevation by animateDpAsState(
+        targetValue = if (showActions || showContributionGraph) 8.dp else 4.dp,
+        label = "cardElevation"
+    )
+    val backgroundColor = if (habit.isCompletedForToday) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) // More subtle completion
+    } else {
+        MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+    }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            //.clip(RoundedCornerShape(12.dp)) // Clipping the card itself
-            .pointerInput(Unit) { // Apply pointerInput to the Card
-                detectTapGestures(
-                    //onLongPress = { showActions = true },
-                    onTap = {
-                        showActions = !showActions
-                    }
-                )
-            },
-        //elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        onClick = {
+            // Simple tap can either toggle completion (if not showing actions/graph)
+            // or toggle graph visibility if that's the primary "detail" view.
+            // For now, let's make it toggle the graph.
+            if (!showActions) { // Avoid graph toggle if actions are shown
+                showContributionGraph = !showContributionGraph
+            }
+        }
     ) {
-        Column {
+        Column(modifier = Modifier.animateContentSize()) {
+            // Main habit info row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .animateContentSize(),
+                    .padding(start = 8.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Completion Icon
                 AnimatedCompletionIcon(isCompleted = habit.isCompletedForToday, onToggleComplete = onToggleComplete)
+
                 Spacer(Modifier.width(12.dp))
+
+                // Name and Days Column
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = habit.name,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                //textDecoration = if (habit.isCompletedForToday) TextDecoration.LineThrough else null,
-                                color = if (habit.isCompletedForToday) MaterialTheme.colorScheme.onSurface.copy(
-                                    alpha = 0.6f
-                                )
-                                else MaterialTheme.colorScheme.onSurface
-                            ),
-                            fontWeight = FontWeight.Bold, // Make title always bold
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    Text(
+                        text = habit.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    DayAbbreviationsRow(daysOfWeek = habit.daysOfWeek)
+                }
+
+
+
+                // Streak and Action Toggle Column
+                Column(horizontalAlignment = Alignment.End) {
+
+
+                    Row { // Buttons side by side
                         if (habit.streakCount > 0) {
-                            Spacer(Modifier.width(8.dp))
-                            Row(modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.End) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    painterResource(id = R.drawable.firefill), // Use your project's R
+                                    painterResource(id = R.drawable.firefill),
                                     contentDescription = "Streak",
-                                    tint = Color(0xFFE65100),
-                                    modifier = Modifier.size(18.dp)
+                                    tint = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primary else Color(0xFFE65100),
+                                    modifier = Modifier.size(20.dp) // Slightly smaller
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
                                     text = habit.streakCount.toString(),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFE65100)
+                                    color = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primary else Color(0xFFE65100)
                                 )
                             }
+                        } else {
+                            // Placeholder for alignment if no streak, or adjust layout
+                            Spacer(Modifier.height(20.dp)) // Matches rough height of streak row
                         }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val todayShortName = LocalDate.now().dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).uppercase()
-                        habit.daysOfWeek.map { it.take(3).uppercase() }.forEach { dayAbbreviation ->
-                            val isToday = dayAbbreviation.equals(todayShortName, ignoreCase = true)
-                            Text(
-                                text = dayAbbreviation,
-                                fontSize = 10.sp,
-                                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier
-                                    .background(
-                                        if (isToday) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
-                                        CircleShape
-                                    )
-                                    .padding(horizontal = 5.dp, vertical = 2.dp),
-                                maxLines = 1 // Ensure day names don't wrap
+                        Spacer(Modifier.width(18.dp))
+
+                        /*IconButton( // Toggle Graph
+                            onClick = {
+                                showContributionGraph = !showContributionGraph
+                                if (showContributionGraph) {
+                                    showActions = false // Hide actions if showing graph
+                                    habitsViewModel.resetGraphMonthToCurrent() // Reset to current month when opening
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Email, // Graph icon
+                                contentDescription = "Show contribution graph",
+                                tint = if (showContributionGraph) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+
+                         */
+                        IconButton( // Toggle Edit/Delete actions
+                            onClick = {
+                                showActions = !showActions
+                                if (showActions) showContributionGraph = false // Hide graph
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Edit, // Or MoreVert
+                                contentDescription = "Show actions",
+                                tint = if (showActions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
                     }
                 }
-
-
             }
 
-            AnimatedVisibility(visible = showActions) {
-                Column {
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-                                    .copy(alpha = 0.5f)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(onClick = { onEdit(); showActions = false }) {
-                            Icon(
-                                Icons.Filled.Edit,
-                                contentDescription = "Edit",
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text("Edit", style = MaterialTheme.typography.labelMedium)
-                        }
-                        TextButton(onClick = { onDelete(); showActions = false }) {
-                            Icon(
-                                Icons.Filled.Delete,
-                                contentDescription = "Delete",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                "Delete",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                }
+            // Collapsible Edit/Delete Actions
+            AnimatedVisibility(
+                visible = showActions,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                HabitActionButtons(
+                    onEdit = { onEdit(); showActions = false },
+                    onDelete = { onDelete(); showActions = false }
+                )
+            }
+
+            // Collapsible Contribution Graph Area
+            AnimatedVisibility(
+                visible = showContributionGraph && !showActions, // Don't show if actions are visible
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                // Use the revised graph
+                HabitContributionGraphMonthly(
+                    habitId = habit.id,
+                    habitName = habit.name,
+                    habitsViewModel = habitsViewModel // Pass the ViewModel instance
+                )
             }
         }
     }
 }
 
+@Composable
+fun DayAbbreviationsRow(daysOfWeek: List<String>) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val todayShortName = LocalDate.now().dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).uppercase()
+        val displayDays = JavaDayOfWeek.entries.map { it.getDisplayName(TextStyle.SHORT, Locale.getDefault()).uppercase() }
+
+        displayDays.forEach { dayAbbr ->
+            val isScheduled = daysOfWeek.any { scheduledDay ->
+                scheduledDay.take(3).equals(dayAbbr.take(3), ignoreCase = true) || // "MON" vs "MONDAY"
+                        scheduledDay.equals( // Handle full day names if stored that way
+                            JavaDayOfWeek.entries.find { it.getDisplayName(TextStyle.SHORT, Locale.getDefault()).uppercase() == dayAbbr }
+                                ?.getDisplayName(TextStyle.FULL, Locale.ENGLISH)?.uppercase(), ignoreCase = true
+                        )
+            }
+            val isToday = dayAbbr.equals(todayShortName, ignoreCase = true)
+
+            Text(
+                dayAbbr.take(1), // Display only the first letter for compactness
+                fontSize = 12.sp,
+                fontWeight = if (isToday && isScheduled) FontWeight.ExtraBold else if (isScheduled) FontWeight.SemiBold else FontWeight.Normal,
+                color = when {
+                    isToday && isScheduled -> MaterialTheme.colorScheme.primary
+                    isScheduled -> MaterialTheme.colorScheme.onSurface
+                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f) // Dimmer for non-scheduled
+                },
+                modifier = Modifier
+                    .background(
+                        when {
+                            isToday && isScheduled -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            isScheduled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+                            else -> Color.Transparent
+                        },
+                        CircleShape
+                    )
+                    .padding(horizontal = 5.dp, vertical = 3.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun HabitActionButtons(onEdit: () -> Unit, onDelete: () -> Unit) {
+    Column {
+        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp).copy(alpha = 0.7f)
+                )
+                .padding(horizontal = 8.dp, vertical = 0.dp), // Reduced vertical padding
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onEdit, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
+                Icon(Icons.Filled.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Edit", style = MaterialTheme.typography.labelMedium)
+            }
+            TextButton(onClick = onDelete, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
+                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Delete", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
+fun HabitContributionGraphPlaceholder(habitName: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(150.dp) // Placeholder height
+            .padding(16.dp)
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                RoundedCornerShape(8.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            "Contribution Graph for '$habitName' (Coming Soon!)",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+// Ensure AnimatedCompletionIcon is defined as provided previously or integrated.
 @Composable
 fun AnimatedCompletionIcon(isCompleted: Boolean, onToggleComplete: () -> Unit) {
     val icon = if (isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.CheckCircle

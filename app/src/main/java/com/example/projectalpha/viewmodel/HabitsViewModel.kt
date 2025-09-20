@@ -9,9 +9,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.projectalpha.data.local.entity.HabitEntity
 import com.example.projectalpha.data.repository.HabitRepository
 import com.example.projectalpha.data.repository.StreakRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -29,7 +31,11 @@ class HabitsViewModel(
     private val _today = MutableStateFlow(LocalDate.now())
     private val sharedPreferences = application.getSharedPreferences("HabitPrefs", Context.MODE_PRIVATE)
 
-    // Filter type state
+    // --- State for Month-wise Graph ---
+    private val _currentDisplayGraphMonth = MutableStateFlow(YearMonth.now())
+    val currentDisplayGraphMonth: StateFlow<YearMonth> = _currentDisplayGraphMonth.asStateFlow()
+
+    // --- Filter type state for the main list ---
     private val _selectedFilterType = MutableStateFlow(HabitFilterType.TODAY)
     val selectedFilterType: StateFlow<HabitFilterType> = _selectedFilterType.asStateFlow()
 
@@ -53,35 +59,54 @@ class HabitsViewModel(
             }
         }
 
-    // The main flow observed by the UI, switches based on selectedFilterType
+    // Example of simplifying habitsToDisplay if graph becomes main detail view.
+    // Otherwise, keep your more complex habitsToDisplay.
+    private val _allHabitsWithCorrectedTodayStatus: Flow<List<HabitEntity>> =
+        combine(habitRepository.getAllHabits(), _today) { allHabits, todayDate ->
+            allHabits.map { habit ->
+                val isScheduledToday = habit.daysOfWeek.any { dayString ->
+                    dayString.equals(todayDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase(), ignoreCase = true)
+                }
+                val isCompletedTodayCorrectly = if (isScheduledToday) {
+                    (habit.lastCompletedDate == todayDate)
+                } else {
+                    false // Not scheduled, so not completed for today in terms of tracking
+                }
+                habit.copy(isCompletedForToday = isCompletedTodayCorrectly)
+            }
+        }
+
     val habitsToDisplay: StateFlow<List<HabitEntity>> =
         selectedFilterType.flatMapLatest { filterType ->
             when (filterType) {
-                HabitFilterType.TODAY -> _todaysScheduledHabitsFlow
-                HabitFilterType.ALL -> _allHabitsFlow.map { allHabits -> // For "All", map to ensure isCompletedForToday is also accurate for the current day
-                    val todayDate = _today.value
-                    allHabits.map { habit ->
-                        val isScheduledToday = habit.daysOfWeek.any { dayString -> dayString.equals(todayDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase(), ignoreCase = true) }
-                        if (isScheduledToday) {
-                            if (habit.lastCompletedDate == todayDate && !habit.isCompletedForToday) {
-                                habit.copy(isCompletedForToday = true)
-                            } else if (habit.lastCompletedDate != null && habit.lastCompletedDate!! < todayDate && habit.isCompletedForToday) {
-                                habit.copy(isCompletedForToday = false)
-                            } else {
-                                habit
-                            }
-                        } else {
-                            // If not scheduled for today, ensure isCompletedForToday is false
-                            habit.copy(isCompletedForToday = false)
+                HabitFilterType.TODAY -> {
+                    combine(_allHabitsWithCorrectedTodayStatus, _today) { allHabits, todayDate ->
+                        val currentDayName = todayDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
+                        allHabits.filter { habit ->
+                            habit.daysOfWeek.any { dayString -> dayString.equals(currentDayName, ignoreCase = true) }
                         }
                     }
                 }
+                HabitFilterType.ALL -> _allHabitsWithCorrectedTodayStatus
             }
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    // --- Functions to change graph month ---
+    fun showNextMonthForGraph() {
+        _currentDisplayGraphMonth.value = _currentDisplayGraphMonth.value.plusMonths(1)
+    }
+
+    fun showPreviousMonthForGraph() {
+        _currentDisplayGraphMonth.value = _currentDisplayGraphMonth.value.minusMonths(1)
+    }
+
+    fun resetGraphMonthToCurrent() {
+        _currentDisplayGraphMonth.value = YearMonth.now()
+    }
 
 
     fun setFilterType(filterType: HabitFilterType) {
@@ -118,41 +143,70 @@ class HabitsViewModel(
         habitRepository.getAllHabits()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+
+    /**
+     * Fetches completion history for a specific habit for the given month.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getHabitCompletionHistoryForMonth(habitId: Int): Flow<Set<LocalDate>> {
+        return currentDisplayGraphMonth.flatMapLatest { yearMonth ->
+            val startDate = yearMonth.atDay(1)
+            val endDate = yearMonth.atEndOfMonth()
+            habitRepository.getCompletionDatesForHabitInRange(habitId, startDate, endDate)
+                .map { it.toSet() } // Convert List to Set
+                .catch { e ->
+                    Log.e("HabitsViewModel", "Error getting completion history for $habitId for month $yearMonth: ${e.message}")
+                    emit(emptySet())
+                }
+        }
+    }
+
     fun toggleHabitCompletion(habit: HabitEntity) {
         viewModelScope.launch {
-            val today = _today.value
+            val todayDate = _today.value // Use the StateFlow's current value
             val isScheduledForToday = habit.daysOfWeek.any {
-                it.equals(today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase(), ignoreCase = true)
+                it.equals(todayDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase(), ignoreCase = true)
             }
 
             if (!isScheduledForToday) {
-                // If not scheduled today, only toggle the UI state but don’t touch streaks
-                val updatedHabit = habit.copy(isCompletedForToday = !habit.isCompletedForToday)
-                habitRepository.updateHabit(updatedHabit)
+                val updatedHabitNonScheduled = habit.copy(isCompletedForToday = !habit.isCompletedForToday)
+                habitRepository.updateHabit(updatedHabitNonScheduled)
                 return@launch
             }
 
-            // Habit is scheduled today
-            val wasCompleted = habit.isCompletedForToday && habit.lastCompletedDate == today
-            val nowCompleted = !wasCompleted
+            val wasPreviouslyCompletedTodayAccordingToFlag = habit.isCompletedForToday // Check based on flag for UI consistency
+            val nowMarkingAsComplete = !wasPreviouslyCompletedTodayAccordingToFlag
 
             var newStreakCount = habit.streakCount
-            var newLastCompletedDate = habit.lastCompletedDate
+            val newLastCompletedDate: LocalDate?
 
-            if (nowCompleted) {
-                // First tap → complete
-                newStreakCount += 1
-                newLastCompletedDate = today
-                streakRepository.incrementStreakPoints(1) // global +1
-            } else {
-                // Second tap → undo
-                if (newStreakCount > 0) newStreakCount -= 1
-                newLastCompletedDate = null
-                streakRepository.incrementStreakPoints(-1) // global -1
+            if (nowMarkingAsComplete) {
+                // If it's already marked as completed today via lastCompletedDate, don't increment streak again
+                if (habit.lastCompletedDate != todayDate) {
+                    newStreakCount += 1
+                }
+                newLastCompletedDate = todayDate
+                habitRepository.addHabitCompletionLog(habit.id, todayDate)
+                if (habit.lastCompletedDate != todayDate) { // Only increment global points if it's a new completion for the day
+                    streakRepository.incrementStreakPoints(1)
+                }
+            } else { // Undoing completion
+                // Only decrement streak if it was truly completed today
+                if (habit.lastCompletedDate == todayDate) {
+                    if (newStreakCount > 0) newStreakCount -= 1
+                    streakRepository.incrementStreakPoints(-1)
+                }
+                // If unchecking, what should lastCompletedDate be?
+                // If there are other logs for this habit, find the latest one before today.
+                // For simplicity now, if unchecking today, set it to null or yesterday if streak >0
+                val previousCompletions = habitRepository.getCompletionDatesForHabit(habit.id).first()
+                newLastCompletedDate = previousCompletions.filter { it.isBefore(todayDate) }.maxOrNull()
+
+                habitRepository.removeHabitCompletionLog(habit.id, todayDate)
             }
 
             val updatedHabit = habit.copy(
-                isCompletedForToday = nowCompleted,
+                isCompletedForToday = nowMarkingAsComplete,
                 streakCount = newStreakCount,
                 lastCompletedDate = newLastCompletedDate
             )
@@ -195,38 +249,52 @@ class HabitsViewModel(
         }
     }
 
+    // Modify performDailyResetIfNeeded to be aware of the new log table
+    // The current reset logic primarily resets isCompletedForToday flag and breaks streaks
+    // based on lastCompletedDate. The new log table is more for historical record.
+    // The streak breaking logic in performDailyResetIfNeeded should ideally use the logs
+    // to determine if a streak should be broken, not just lastCompletedDate.
+
+    // ... (rest of your ViewModel, especially performDailyResetIfNeeded, will need review)
+    // For performDailyResetIfNeeded, when checking if a streak should be broken for a past day,
+    // you'd query wasHabitCompletedOnDate(habit.id, dateToProcess) from the new log.
+    // If it returns false, then break the streak.
+
     fun performDailyResetIfNeeded() {
         viewModelScope.launch {
-            val today = LocalDate.now() // Use fresh LocalDate.now() here for the check
+            val todayDate = LocalDate.now() // Use a fresh now() for the check
+            if (_today.value != todayDate) { // Update internal _today if necessary
+                _today.value = todayDate
+            }
+
             val lastResetDateStr = sharedPreferences.getString("lastHabitResetDate", null)
-            val lastResetDate = lastResetDateStr?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today.minusDays(1)
+            val lastResetDate = lastResetDateStr?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: todayDate.minusDays(1)
 
-            if (today.isAfter(lastResetDate)) {
-                Log.d("HabitsViewModel", "Performing daily reset for habits. Today: $today, Last Reset: $lastResetDate")
-                habitRepository.resetAllHabitsCompletionStatus() // Sets isCompletedForToday = false for all
+            if (todayDate.isAfter(lastResetDate)) {
+                Log.d("HabitsViewModel", "Performing daily reset. Today: $todayDate, Last Reset: $lastResetDate")
+                habitRepository.resetAllHabitsCompletionStatus()
 
-                val habitsToCheck = habitRepository.getAllHabits().first() // Get current state from DB
+                val allHabitsCurrentState = habitRepository.getAllHabits().first()
 
-                // Iterate from lastResetDate + 1 day up to yesterday
-                var dateToProcess = lastResetDate.plusDays(1)
-                while (!dateToProcess.isAfter(today.minusDays(1))) {
-                    val dayToProcessName = dateToProcess.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
-                    habitsToCheck.forEach { habit ->
-                        if (habit.daysOfWeek.any { it.equals(dayToProcessName, ignoreCase = true) } && // Was scheduled
-                            (habit.lastCompletedDate == null || habit.lastCompletedDate!! < dateToProcess) && // Not completed on or after this day
-                            habit.streakCount > 0
-                        ) {
-                            Log.d("HabitsViewModel", "Breaking streak for habit: ${habit.name} for not completing on $dateToProcess")
-                            habitRepository.updateHabit(habit.copy(streakCount = 0))
+                var dateToCheck = lastResetDate.plusDays(1)
+                while (!dateToCheck.isAfter(todayDate.minusDays(1))) {
+                    val dayNameForDateToCheck = dateToCheck.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase()
+                    for (habit in allHabitsCurrentState) {
+                        val isScheduledOnDateToCheck = habit.daysOfWeek.any { it.equals(dayNameForDateToCheck, ignoreCase = true) }
+                        if (isScheduledOnDateToCheck) {
+                            val completedOnDateToCheck = habitRepository.wasHabitCompletedOnDate(habit.id, dateToCheck).first()
+                            if (!completedOnDateToCheck && habit.streakCount > 0) {
+                                Log.d("HabitsViewModel", "Streak broken for '${habit.name}' on $dateToCheck. Old streak: ${habit.streakCount}")
+                                // When breaking streak, lastCompletedDate should be the actual last completion before the break.
+                                val previousLogs = habitRepository.getCompletionDatesForHabit(habit.id).first()
+                                val newLastCompleted = previousLogs.filter { it.isBefore(dateToCheck) }.maxOrNull()
+                                habitRepository.updateHabit(habit.copy(streakCount = 0, lastCompletedDate = newLastCompleted))
+                            }
                         }
                     }
-                    dateToProcess = dateToProcess.plusDays(1)
+                    dateToCheck = dateToCheck.plusDays(1)
                 }
-                sharedPreferences.edit().putString("lastHabitResetDate", today.toString()).apply()
-            }
-            // Ensure _today StateFlow reflects the actual current date if logic runs across midnight or on app start
-            if (_today.value != today) {
-                _today.value = today
+                sharedPreferences.edit().putString("lastHabitResetDate", todayDate.toString()).apply()
             }
         }
     }
@@ -234,6 +302,17 @@ class HabitsViewModel(
     init {
         Log.d("HabitsViewModel", "ViewModel initialized. Performing daily reset check.")
         performDailyResetIfNeeded()
+    }
+
+    // New function to provide data for the contribution graph
+    fun getHabitCompletionHistory(habitId: Int, numberOfMonths: Int = 6): Flow<List<LocalDate>> {
+        val endDate = LocalDate.now()
+        val startDate = endDate.minusMonths(numberOfMonths.toLong()).withDayOfMonth(1)
+        return habitRepository.getCompletionDatesForHabitInRange(habitId, startDate, endDate)
+            .catch { e ->
+                Log.e("HabitsViewModel", "Error getting habit completion history for $habitId: ${e.message}")
+                emit(emptyList()) // Emit empty list on error
+            }
     }
 }
 
