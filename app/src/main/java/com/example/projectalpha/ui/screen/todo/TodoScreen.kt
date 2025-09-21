@@ -46,11 +46,11 @@ import com.example.projectalpha.data.local.entity.TaskEntity
 import com.example.projectalpha.ui.navigation.Screen
 import com.example.projectalpha.ui.theme.AppTypography
 import com.example.projectalpha.ui.theme.HighPriorityFont
-import com.example.projectalpha.ui.theme.HighPriorityFont1
+//import com.example.projectalpha.ui.theme.HighPriorityFont1
 import com.example.projectalpha.ui.theme.LowPriorityFont
-import com.example.projectalpha.ui.theme.LowPriorityFont1
+//import com.example.projectalpha.ui.theme.LowPriorityFont1
 import com.example.projectalpha.ui.theme.MediumPriorityFont
-import com.example.projectalpha.ui.theme.MediumPriorityFont1
+//import com.example.projectalpha.ui.theme.MediumPriorityFont1
 import com.example.projectalpha.viewmodel.ToDoViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -275,7 +275,7 @@ fun TaskItem(
             .padding(horizontal = 10.dp, vertical = 2.dp)
             .clickable { isExpanded = !isExpanded },
         colors = CardDefaults.cardColors(containerColor = if (task.isCompleted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = .20f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = .38f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        //elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
 
     ) {
         Row(

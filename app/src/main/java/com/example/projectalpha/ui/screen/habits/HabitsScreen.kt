@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,7 +17,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.outlined.CheckCircle // Consistent outlined icon for pending
 // Material 3 imports
 import androidx.compose.material3.AlertDialog
@@ -28,7 +26,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip // Explicit M3 FilterChip import
 import androidx.compose.material3.FilterChipDefaults // Explicit M3 FilterChipDefaults import
@@ -57,10 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,9 +67,7 @@ import java.time.DayOfWeek as JavaDayOfWeek // Alias
 import java.time.format.TextStyle
 import java.util.Locale
 import androidx.compose.material3.OutlinedButton // For toggle buttons
-import androidx.compose.material3.TextButton // Already there
-import androidx.compose.ui.unit.dp
-import androidx.room.Update
+import com.example.projectalpha.ui.theme.FireColor
 import com.example.projectalpha.viewmodel.HabitFilterType // Import the enum
 import java.time.LocalDate
 
@@ -128,7 +121,7 @@ fun HabitsScreen(habitsViewModel: HabitsViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                //elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .4f),
@@ -283,21 +276,22 @@ fun HabitItemCard(
     onShowDetails: (HabitEntity) -> Unit
 ) {
     var showActions by rememberSaveable { mutableStateOf(false) }
-    var showContributionGraph by rememberSaveable { mutableStateOf(false) } // State for graph visibility
+    var showHabitGraph by rememberSaveable { mutableStateOf(false) }
+    val MAX_HABIT_NAME_DISPLAY_LENGTH = 30
 
     val cardElevation by animateDpAsState(
-        targetValue = if (showActions || showContributionGraph) 8.dp else 4.dp,
+        targetValue = if (showActions || showHabitGraph) 8.dp else 4.dp,
         label = "cardElevation"
     )
     val backgroundColor = if (habit.isCompletedForToday) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) // More subtle completion
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f) // More subtle completion
     } else {
         MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        //elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         onClick = {
@@ -305,7 +299,7 @@ fun HabitItemCard(
             // or toggle graph visibility if that's the primary "detail" view.
             // For now, let's make it toggle the graph.
             if (!showActions) { // Avoid graph toggle if actions are shown
-                showContributionGraph = !showContributionGraph
+                showHabitGraph = !showHabitGraph
             }
         }
     ) {
@@ -327,7 +321,11 @@ fun HabitItemCard(
                     Row (horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()){
                         Text(
-                            text = habit.name,
+                            text = if (habit.name.length > MAX_HABIT_NAME_DISPLAY_LENGTH) {
+                                "${habit.name.take(MAX_HABIT_NAME_DISPLAY_LENGTH)}…" // Add ellipsis manually if truncated
+                            } else {
+                                habit.name
+                            },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -341,7 +339,7 @@ fun HabitItemCard(
                                     Icon(
                                         painterResource(id = R.drawable.firefill),
                                         contentDescription = "Streak",
-                                        tint = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primary else Color(0xFFE65100),
+                                        tint = /*if (habit.isCompletedForToday) MaterialTheme.colorScheme.primary else*/ FireColor,
                                         modifier = Modifier.size(20.dp) // Slightly smaller
                                     )
                                     Spacer(Modifier.width(4.dp))
@@ -349,7 +347,7 @@ fun HabitItemCard(
                                         text = habit.streakCount.toString(),
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (habit.isCompletedForToday) MaterialTheme.colorScheme.primary else Color(0xFFE65100)
+                                        color = /*if (habit.isCompletedForToday) MaterialTheme.colorScheme.primary else*/ FireColor
                                     )
                                 }
                             } else {
@@ -379,7 +377,7 @@ fun HabitItemCard(
                             IconButton( // Toggle Edit/Delete actions
                                 onClick = {
                                     showActions = !showActions
-                                    if (showActions) showContributionGraph = false // Hide graph
+                                    if (showActions) showHabitGraph = false // Hide graph
                                 },
                                 modifier = Modifier.size(24.dp)
                             ) {
@@ -420,7 +418,7 @@ fun HabitItemCard(
 
             // Collapsible Contribution Graph Area
             AnimatedVisibility(
-                visible = showContributionGraph && !showActions, // Don't show if actions are visible
+                visible = showHabitGraph && !showActions, // Don't show if actions are visible
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
@@ -595,10 +593,10 @@ fun AddEditHabitDialog(
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardColors(
-                containerColor = MaterialTheme.colorScheme.background,
+                containerColor = MaterialTheme.colorScheme.inverseOnSurface,
                 contentColor = MaterialTheme.colorScheme.onBackground,
                 disabledContainerColor = MaterialTheme.colorScheme.inversePrimary,
-                disabledContentColor = MaterialTheme.colorScheme.inverseOnSurface
+                disabledContentColor = MaterialTheme.colorScheme.onSurface
             )
         ) {
             Column(

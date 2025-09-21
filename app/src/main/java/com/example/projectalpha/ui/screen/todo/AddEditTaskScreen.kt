@@ -242,7 +242,8 @@ fun AddEditTaskScreen(
                         )
 
                         OutlinedButton(
-                            onClick = { showDeadlineTimePickerDialog = true },
+                            onClick = { showDeadlineTimePickerDialog = true
+                                      hasDeadline = true},
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium
                         ) {
@@ -401,7 +402,8 @@ fun AddEditTaskScreen(
             is24Hour = false
         )
         BasicAlertDialog(// Changed from BasicAlertDialog for standard M3 appearance
-            onDismissRequest = { showDeadlineTimePickerDialog = false }
+            onDismissRequest = { showDeadlineTimePickerDialog = false
+                hasDeadline = false}
         ) {
             Surface( // Wrap content in a Surface for theming and shape
                 shape = MaterialTheme.shapes.large,
@@ -426,6 +428,7 @@ fun AddEditTaskScreen(
                     ) {
                         TextButton(onClick = {
                             showDeadlineTimePickerDialog = false
+                            hasDeadline = false
                         }) { Text("Cancel") }
                         Spacer(modifier = Modifier.width(8.dp))
                         TextButton(

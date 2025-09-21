@@ -2,6 +2,7 @@ package com.example.projectalpha.ui.screen.pomodoro
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -33,12 +34,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.example.projectalpha.R
 import com.example.projectalpha.viewmodel.DEFAULT_LONG_BREAK_DURATION_SECONDS
 import com.example.projectalpha.viewmodel.DEFAULT_SHORT_BREAK_DURATION_SECONDS
 import com.example.projectalpha.viewmodel.DEFAULT_WORK_DURATION_SECONDS
@@ -214,7 +217,7 @@ fun ControlButtons(
     ) {
         IconButton(onClick = onReset, enabled = canReset) {
             Icon(
-                imageVector = Icons.Filled.Refresh,
+                painter = painterResource(R.drawable.restarticon),
                 contentDescription = "Reset Timer",
                 modifier = Modifier.size(36.dp),
                 tint = if (canReset) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)            )
@@ -230,15 +233,15 @@ fun ControlButtons(
             )
         ) {
             Icon(
-                imageVector = if (isRunning) Icons.Filled.KeyboardArrowUp else Icons.Filled.PlayArrow,
+                painter = if (isRunning) painterResource(id = R.drawable.pauseicon) else painterResource(id = R.drawable.playicon),
                 contentDescription = if (isRunning) "Pause Timer" else "Start Timer",
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(if (isRunning) 36.dp else 42.dp)
             )
         }
 
         IconButton(onClick = onSkip) {
             Icon(
-                imageVector = Icons.Filled.KeyboardArrowDown,
+                painter = painterResource(R.drawable.skipiconwhite),
                 contentDescription = "Skip Session",
                 modifier = Modifier.size(36.dp),
                 tint = MaterialTheme.colorScheme.secondary
@@ -305,10 +308,10 @@ fun CustomScrollableTimePickerDialog(
                 .fillMaxWidth()
                 .padding(16.dp),
             colors = CardColors(
-                containerColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                containerColor = MaterialTheme.colorScheme.inverseOnSurface,
+                contentColor = MaterialTheme.colorScheme.onBackground,
                 disabledContainerColor = MaterialTheme.colorScheme.inversePrimary,
-                disabledContentColor = MaterialTheme.colorScheme.inverseOnSurface
+                disabledContentColor = MaterialTheme.colorScheme.onSurface
             )
         ) {
             Column(
@@ -384,8 +387,12 @@ fun ScrollableNumberPicker(
     val centralItemTextStyle = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.primary)
     val peripheralItemTextStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-    Box(modifier = modifier.height(itemHeight * visibleItemsCount).clip(
-        RoundedCornerShape(50f)).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 1f))
+    Box(modifier = modifier
+        .height(itemHeight * visibleItemsCount)
+        .clip(
+            RoundedCornerShape(50f)
+        )
+        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 1f))
     ) {
         LazyColumn(
             state = listState,
@@ -420,14 +427,14 @@ fun ScrollableNumberPicker(
         HorizontalDivider(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = itemHeight * (visibleItemsCount / 2) - (itemHeight / 2)+20.dp), // Adjust position
+                .offset(y = itemHeight * (visibleItemsCount / 2) - (itemHeight / 2) + 20.dp), // Adjust position
             thickness = 1.dp,
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
         )
         HorizontalDivider(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = -(itemHeight * (visibleItemsCount / 2) - (itemHeight / 2)+20.dp)), // Adjust position
+                .offset(y = -(itemHeight * (visibleItemsCount / 2) - (itemHeight / 2) + 20.dp)), // Adjust position
             thickness = 1.dp,
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
         )
@@ -477,10 +484,10 @@ fun EditDurationsDialog(
                 .padding(16.dp),
             shape = MaterialTheme.shapes.large,
             colors = CardColors(
-                containerColor = MaterialTheme.colorScheme.background,
+                containerColor = MaterialTheme.colorScheme.inverseOnSurface,
                 contentColor = MaterialTheme.colorScheme.onBackground,
                 disabledContainerColor = MaterialTheme.colorScheme.inversePrimary,
-                disabledContentColor = MaterialTheme.colorScheme.inverseOnSurface
+                disabledContentColor = MaterialTheme.colorScheme.onSurface
             )
         ) {
             Column(

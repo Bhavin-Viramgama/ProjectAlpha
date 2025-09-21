@@ -2,6 +2,7 @@ package com.example.projectalpha.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -17,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+/* Old Dark and Light Theme Color Schemes
 private val AppDarkColorScheme = darkColorScheme(
     primary = DeepBluePrimaryLight, // Lighter blue for primary in dark mode for better visibility
     onPrimary = NeutralGrayDark,    // Dark text on light blue
@@ -77,11 +79,91 @@ private val AppLightColorScheme = lightColorScheme(
     surfaceTint = DeepBluePrimary // Tint color for elevated surfaces
 )
 
+ */
+
+private val AppDarkColorScheme = darkColorScheme(
+    primary = DeepBluePrimary,
+    onPrimary = OnDeepBluePrimary,
+    primaryContainer = DeepBluePrimaryContainer,
+    onPrimaryContainer = OnDeepBluePrimaryContainer,
+
+    secondary = TealSecondary,
+    onSecondary = OnTealSecondary,
+    secondaryContainer = TealSecondaryContainer,
+    onSecondaryContainer = OnTealSecondaryContainer,
+
+    tertiary = PinkTertiary,
+    onTertiary = OnPinkTertiary,
+    tertiaryContainer = PinkTertiaryContainer,
+    onTertiaryContainer = OnPinkTertiaryContainer,
+
+    error = ErrorRed,
+    onError = OnErrorRed,
+    errorContainer = ErrorContainer,
+    onErrorContainer = OnErrorContainer,
+
+    background = DarkBackground,
+    onBackground = OnDarkBackground,
+
+    surface = DarkSurface,
+    onSurface = OnDarkSurface,
+
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = OnDarkSurfaceVariant,
+
+    outline = OutlineGray,
+
+    inverseOnSurface = InverseOnSurfaceDark,
+    inverseSurface = InverseSurfaceDark,
+    inversePrimary = InversePrimaryDark,
+
+    surfaceTint = SurfaceTintBlue
+)
+
+private val AppLightColorScheme = lightColorScheme(
+    primary = BluePrimary,
+    onPrimary = OnBluePrimary,
+    primaryContainer = BluePrimaryContainer,
+    onPrimaryContainer = OnBluePrimaryContainer,
+
+    secondary = GraySecondary,
+    onSecondary = OnGraySecondary,
+    secondaryContainer = GraySecondaryContainer,
+    onSecondaryContainer = OnGraySecondaryContainer,
+
+    tertiary = VioletTertiary,
+    onTertiary = OnVioletTertiary,
+    tertiaryContainer = VioletTertiaryContainer,
+    onTertiaryContainer = OnVioletTertiaryContainer,
+
+    error = ErrorRedLight,
+    onError = OnErrorRedLight,
+    errorContainer = ErrorContainerLight,
+    onErrorContainer = OnErrorContainerLight,
+
+    background = LightBackground,
+    onBackground = OnLightBackground,
+
+    surface = LightSurface,
+    onSurface = OnLightSurface,
+
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = OnLightSurfaceVariant,
+
+    outline = OutlineGrayLight,
+
+    inverseOnSurface = InverseOnSurfaceLight,
+    inverseSurface = InverseSurfaceLight,
+    inversePrimary = InversePrimaryLight,
+
+    surfaceTint = SurfaceTintBlueLight
+)
+
 @Composable
 fun ProjectAlphaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true, // Set to false if you want to strictly use your custom theme
+    dynamicColor: Boolean = false, // Set to false if you want to strictly use your custom theme
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -92,6 +174,36 @@ fun ProjectAlphaTheme(
         darkTheme -> AppDarkColorScheme
         else -> AppLightColorScheme
     }
+    /* To Find ColorCode of dynamic Colors
+    Log.d("Colors", "primary = ${colorScheme.primary}")
+    Log.d("Colors", "onPrimary = ${colorScheme.onPrimary}")
+    Log.d("Colors", "primaryContainer = ${colorScheme.primaryContainer}")
+    Log.d("Colors", "onPrimaryContainer = ${colorScheme.onPrimaryContainer}")
+    Log.d("Colors", "secondary = ${colorScheme.secondary}")
+    Log.d("Colors", "onSecondary = ${colorScheme.onSecondary}")
+    Log.d("Colors", "secondaryContainer = ${colorScheme.secondaryContainer}")
+    Log.d("Colors", "onSecondaryContainer = ${colorScheme.onSecondaryContainer}")
+    Log.d("Colors", "tertiary = ${colorScheme.tertiary}")
+    Log.d("Colors", "onTertiary = ${colorScheme.onTertiary}")
+    Log.d("Colors", "tertiaryContainer = ${colorScheme.tertiaryContainer}")
+    Log.d("Colors", "onTertiaryContainer = ${colorScheme.onTertiaryContainer}")
+    Log.d("Colors", "error = ${colorScheme.error}")
+    Log.d("Colors", "onError = ${colorScheme.onError}")
+    Log.d("Colors", "errorContainer = ${colorScheme.errorContainer}")
+    Log.d("Colors", "onErrorContainer = ${colorScheme.onErrorContainer}")
+    Log.d("Colors", "background = ${colorScheme.background}")
+    Log.d("Colors", "onBackground = ${colorScheme.onBackground}")
+    Log.d("Colors", "surface = ${colorScheme.surface}")
+    Log.d("Colors", "onSurface = ${colorScheme.onSurface}")
+    Log.d("Colors", "surfaceVariant = ${colorScheme.surfaceVariant}")
+    Log.d("Colors", "onSurfaceVariant = ${colorScheme.onSurfaceVariant}")
+    Log.d("Colors", "outline = ${colorScheme.outline}")
+    Log.d("Colors", "inverseOnSurface = ${colorScheme.inverseOnSurface}")
+    Log.d("Colors", "inverseSurface = ${colorScheme.inverseSurface}")
+    Log.d("Colors", "inversePrimary = ${colorScheme.inversePrimary}")
+    Log.d("Colors", "surfaceTint = ${colorScheme.surfaceTint}")
+     */
+
     // to handle status bar color
 //    val view = LocalView.current
 //    if (!view.isInEditMode) {

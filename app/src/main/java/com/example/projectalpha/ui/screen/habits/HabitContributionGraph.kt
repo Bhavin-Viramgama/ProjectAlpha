@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
@@ -75,7 +77,7 @@ fun HabitContributionGraphMonthly(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = { habitsViewModel.showPreviousMonthForGraph() }) {
-                Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "Previous Month")
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous Month")
             }
             Text(
                 text = "${displayMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${displayMonth.year}",
@@ -87,7 +89,7 @@ fun HabitContributionGraphMonthly(
                 enabled = displayMonth.isBefore(YearMonth.now())
             ) {
                 Icon(
-                    Icons.Filled.KeyboardArrowRight,
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Next Month",
                     tint = if (displayMonth.isBefore(YearMonth.now())) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
@@ -158,7 +160,7 @@ private fun MonthlyDayCell(
 ) {
     val cellColor = when {
         !isCurrentMonth -> MaterialTheme.colorScheme.surfaceColorAtElevation(0.5.dp).copy(alpha = 0.5f)
-        isCompleted -> MaterialTheme.colorScheme.primary
+        isCompleted -> MaterialTheme.colorScheme.primary.copy(alpha = .8f)
         isToday && isCurrentMonth -> MaterialTheme.colorScheme.secondaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
     }
