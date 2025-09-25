@@ -1,15 +1,20 @@
 package com.example.projectalpha.ui.screen.pomodoro
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -19,14 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +56,7 @@ fun PomodoroScreen(pomodoroViewModel: PomodoroViewModel) {
     val isRunning by pomodoroViewModel.isRunning.collectAsState()
     val currentSessionType by pomodoroViewModel.currentSessionType.collectAsState()
     val customDurations by pomodoroViewModel.customDurations.collectAsState()
+    val upcomingSessions by pomodoroViewModel.upcomingSessionSequence.collectAsState() // Collect the sequence
 
     // Collect the effectiveMaxDurationSeconds StateFlow from the ViewModel
     val effectiveMaxDuration by pomodoroViewModel.effectiveMaxDurationSeconds.collectAsState()
@@ -121,10 +121,10 @@ fun PomodoroScreen(pomodoroViewModel: PomodoroViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues) // Apply padding from Scaffold
-                .padding(24.dp), // Additional screen padding
+                .padding(horizontal = 16.dp, vertical = 16.dp), // Additional screen padding
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(
-                space = 55.dp,
+                space = 32.dp,
                 alignment = Alignment.Top
             )
         ) {
@@ -133,6 +133,17 @@ fun PomodoroScreen(pomodoroViewModel: PomodoroViewModel) {
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
+
+            if (upcomingSessions.isNotEmpty()) { // Only show if there's a sequence
+                PomodoroSessionSequenceIndicator(
+                    currentSessionType = currentSessionType,
+                    upcomingSessions = upcomingSessions
+                )
+            } else {
+                // Optional: Placeholder or small spacer if sequence is empty initially
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
 
             CircularTimerView(
                 progress = progress,
@@ -152,6 +163,170 @@ fun PomodoroScreen(pomodoroViewModel: PomodoroViewModel) {
                 canReset = effectiveMaxDuration > 0 || timeRemainingSeconds == 0
             )
         }
+    }
+}
+
+@Composable
+fun PomodoroSessionSequenceIndicator(
+    currentSessionType: PomodoroSessionType, // To highlight the current one
+    upcomingSessions: List<PomodoroSessionType>,
+    modifier: Modifier = Modifier
+) {
+    if (upcomingSessions.isEmpty()) return
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .animateContentSize(),
+        horizontalArrangement = Arrangement.Center, // Center the sequence items
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Display current session type prominently
+        SessionIndicatorItem(
+            sessionType = currentSessionType,
+            isCurrent = true, // Special styling for the current session
+            isNextInQueue = false // Not the "next" in sequence, but *the* current
+        )
+
+        Icon(
+            painter = painterResource(id = R.drawable.arrowforward), // Replace with your forward arrow drawable
+            contentDescription = "then",
+            modifier = Modifier
+                .size(20.dp)
+                .padding(horizontal = 4.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        val itemsToShow = upcomingSessions.take(4)
+        itemsToShow.forEachIndexed { index, sessionType ->
+            // By passing a key that's relatively stable or changes predictably,
+            // Compose can better manage animations. Here, index within the `itemsToShow`
+            // list can serve as part of a key if needed, but the internal animations
+            // of SessionIndicatorItem will do most of the work.
+            key(sessionType.ordinal + index) { // Example key: combines type and position
+                SessionIndicatorItem(
+                    sessionType = sessionType,
+                    isCurrent = false,
+                    isNextInQueue = index == 0
+                )
+            }
+            if (index < itemsToShow.size - 1) {
+                AnimatedVisibility(visible = true) { // Arrow always visible between items
+                    Icon(
+                        painter = painterResource(id = R.drawable.arrowforward),
+                        contentDescription = "then",
+                        modifier = Modifier
+                            .size(16.dp)
+                            .padding(horizontal = 2.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+
+}
+
+@Composable
+private fun SessionIndicatorItem(
+    sessionType: PomodoroSessionType,
+    isCurrent: Boolean,
+    isNextInQueue: Boolean
+) {
+    val text = when (sessionType) {
+        PomodoroSessionType.WORK -> "Focus"
+        PomodoroSessionType.SHORT_BREAK -> "Short"
+        PomodoroSessionType.LONG_BREAK -> "Long"
+    }
+    val iconPainter = painterResource(
+        id = when (sessionType) {
+            PomodoroSessionType.WORK -> R.drawable.power
+            PomodoroSessionType.SHORT_BREAK -> R.drawable.coffee
+            PomodoroSessionType.LONG_BREAK -> R.drawable.relax
+        }
+    )
+
+    val targetBackgroundColor = when {
+        isCurrent -> MaterialTheme.colorScheme.primaryContainer
+        isNextInQueue -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    }
+    val animatedBackgroundColor by animateColorAsState(
+        targetValue = targetBackgroundColor,
+        animationSpec = tween(durationMillis = 500), label = "bgColorAnim"
+    )
+
+    val targetContentColor = when {
+        isCurrent -> MaterialTheme.colorScheme.onPrimaryContainer
+        isNextInQueue -> MaterialTheme.colorScheme.onSecondaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val animatedContentColor by animateColorAsState(
+        targetValue = targetContentColor,
+        animationSpec = tween(durationMillis = 500), label = "contentColorAnim"
+    )
+
+    val targetSize = if (isCurrent) 48.dp else 40.dp
+    val animatedSize by animateDpAsState(
+        targetValue = targetSize,
+        animationSpec = tween(durationMillis = 300), label = "sizeAnim"
+    )
+
+    val targetIconSize = if (isCurrent) 24.dp else 20.dp
+    val animatedIconSize by animateDpAsState(
+        targetValue = targetIconSize,
+        animationSpec = tween(durationMillis = 300), label = "iconSizeAnim"
+    )
+
+    val targetBorderStroke =
+        if (isCurrent) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+    // Animating BorderStroke itself is tricky directly.
+    // A common way is to animate the border color's alpha or width.
+    // For simplicity, we'll make the border appear/disappear.
+    // If you need smoother border animation, you might animate its color alpha.
+    val animatedBorderColor by animateColorAsState(
+        targetValue = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Transparent,
+        animationSpec = tween(durationMillis = 500), label = "borderColorAnim"
+    )
+    val animatedBorderWidth by animateDpAsState(
+        targetValue = if (isCurrent) 2.dp else 0.dp, // Animate width to 0 for no border
+        animationSpec = tween(durationMillis = 500), label = "borderWidthAnim"
+    )
+
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .padding(horizontal = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(animatedSize)
+                .clip(CircleShape)
+                .background(animatedBackgroundColor)
+                .border(
+                    width = animatedBorderWidth,
+                    color = animatedBorderColor,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = iconPainter,
+                contentDescription = text,
+                modifier = Modifier.size(animatedIconSize),
+                tint = animatedContentColor
+            )
+        }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = text,
+            style = if (isCurrent) MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+            else MaterialTheme.typography.labelSmall,
+            color = animatedContentColor, // Use animated content color
+            textAlign = TextAlign.Center
+        )
     }
 }
 

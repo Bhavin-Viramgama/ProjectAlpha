@@ -45,6 +45,10 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
     private val _currentSessionType = MutableStateFlow(PomodoroSessionType.WORK)
     val currentSessionType: StateFlow<PomodoroSessionType> = _currentSessionType.asStateFlow()
 
+    private val _upcomingSessionSequence = MutableStateFlow<List<PomodoroSessionType>>(emptyList())
+    val upcomingSessionSequence: StateFlow<List<PomodoroSessionType>> = _upcomingSessionSequence.asStateFlow()
+
+
     private var workSessionsCompleted = 0
     private var countDownTimer: CountDownTimer? = null
 
@@ -57,6 +61,7 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
         val initialDuration = getDurationForSessionTypeFromDefaults(_currentSessionType.value)
         _timeRemainingSeconds.value = initialDuration
         _effectiveMaxDurationSeconds.value = initialDuration
+        updateUpcomingSessionSequence() // Initialize the sequence
 
     }
 
@@ -133,6 +138,7 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
         val newDefaultDuration = getDurationForSessionTypeFromDefaults(_currentSessionType.value)
         _timeRemainingSeconds.value = newDefaultDuration
         _effectiveMaxDurationSeconds.value = newDefaultDuration
+        updateUpcomingSessionSequence()
         Log.d("PomodoroVM", "Session Handled. New Session: ${_currentSessionType.value}, Duration: $newDefaultDuration")
 
     }
@@ -149,6 +155,34 @@ class PomodoroViewModel : ViewModel() { // Removed StreakRepository
         handleSessionFinished()
         Log.d("PomodoroVM", "Session Skipped. New Session: ${_currentSessionType.value}, Duration: ${_timeRemainingSeconds.value}")
     }
+
+    private fun updateUpcomingSessionSequence() {
+        val sequence = mutableListOf<PomodoroSessionType>()
+        var tempWorkSessionsCompleted = workSessionsCompleted
+        var nextSession = _currentSessionType.value
+
+        // Add the current session first if you want to highlight it in the sequence
+        // sequence.add(nextSession) // Optional: include current session
+
+        // Predict next N sessions (e.g., next 4-5 sessions to show the cycle)
+        for (i in 0 until 5) { // Show next 5 sessions in the sequence
+            // Determine what the session *after* 'nextSession' would be
+            val sessionAfterNext = if (nextSession == PomodoroSessionType.WORK) {
+                tempWorkSessionsCompleted++ // Simulate completion of this work session
+                if (tempWorkSessionsCompleted % 4 == 0 && tempWorkSessionsCompleted > 0) {
+                    PomodoroSessionType.LONG_BREAK
+                } else {
+                    PomodoroSessionType.SHORT_BREAK
+                }
+            } else { // If nextSession is a break
+                PomodoroSessionType.WORK
+            }
+            sequence.add(sessionAfterNext)
+            nextSession = sessionAfterNext // Update nextSession for the next iteration
+        }
+        _upcomingSessionSequence.value = sequence
+    }
+
 
     // Public getter for UI to know max duration
     fun getDurationForSessionTypeFromDefaults(type: PomodoroSessionType): Int {

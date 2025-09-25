@@ -277,7 +277,7 @@ fun HabitItemCard(
 ) {
     var showActions by rememberSaveable { mutableStateOf(false) }
     var showHabitGraph by rememberSaveable { mutableStateOf(false) }
-    val MAX_HABIT_NAME_DISPLAY_LENGTH = 30
+    val MAX_HABIT_NAME_DISPLAY_LENGTH = 25
 
     val cardElevation by animateDpAsState(
         targetValue = if (showActions || showHabitGraph) 8.dp else 4.dp,
